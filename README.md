@@ -1,20 +1,67 @@
 # tmux-nvim-kit
 
-在 Windows（WSL）里搭一套**轻量的看代码环境**，代替 IntelliJ IDEA 来读代码：
+> 一键在 Windows（WSL）里搭一套**像 IntelliJ IDEA 一样好用的轻量看代码环境**：Neovim + tmux，还能在浏览器里打开。
+> A one-command setup for an IDEA-like code reading environment on WSL: Neovim (LazyVim) + tmux + browser access via ttyd.
 
-- **Neovim + LazyVim**：配色、界面、快捷键尽量向 IDEA（Islands Dark）看齐，Java 跳转/查找引用由 jdtls 提供
-- **tmux**：多项目、多窗口、分屏，关掉终端也不丢
+![平台](https://img.shields.io/badge/平台-Windows_10%2F11_+_WSL2-0078D6)
+![Neovim](https://img.shields.io/badge/Neovim-0.11+-57A143)
+![tmux](https://img.shields.io/badge/tmux-3.4+-1BB91F)
+![语言](https://img.shields.io/badge/文档-中文-red)
+
+## 为什么用它
+
+IDEA 打开大型 Java 项目又慢又吃内存，只是想**看代码、跳转、搜索**时显得太重。这套工具把 Neovim 调教成 IDEA 的样子和手感：
+
+- **不用重新学快捷键**：`Ctrl+B` 跳转、`Ctrl+Shift+F` 全局搜索、`Ctrl+F` 查找、`Ctrl+E` 最近文件、`Alt+Enter` 意图操作……按 IDEA（Windows 默认键位）来
+- **Neovim + LazyVim**：配色、界面尽量向 IDEA（Islands Dark）看齐，Java 跳转 / 查找引用由 jdtls 提供
+- **tmux**：多项目、多窗口、分屏，关掉终端也不丢；适合左边看代码、右边跑 Claude Code
 - **浏览器访问**：内网任何设备打开网页，就能看到并操作同一个 tmux 画面
+- **全中文**：按键提示、帮助面板（`F1` / `空格 h`）、状态提示都是中文
 
-装好后的效果：
+## 功能一览
 
 | 能力 | 说明 |
 |---|---|
-| Java 看代码 | `gd` 跳定义、`gr` 查引用、`gI` 跳实现；跳进依赖库自动下载源码/反编译；Lombok 支持 |
+| Java 看代码 | `gd` 跳定义、`gr` 查引用、`gI` 跳实现；跳进依赖库自动下载源码/反编译；Lombok 支持；项目导入进度显示在状态栏 |
+| IDEA 快捷键 | Windows 默认键位；`Ctrl+Shift+字母` 在 Windows Terminal 和浏览器里都可用（见 `windows/wt-keys.ps1`） |
 | IDEA 配色 | 关键字橙、字符串绿、字段紫、注解土黄、方法声明蓝、static 斜体（jdtls 语义高亮） |
-| IDEA 界面 | 顶部固定显示当前类/方法、面包屑、方法上方 "N references"、参数名提示、文件标签栏 |
+| IDEA 界面 | 顶部固定显示当前类/方法、面包屑、方法上方 "N references"、参数名提示、文件标签栏、右上角查找栏 |
+| 搜索 | 全局搜索默认按字面、不区分大小写，`Alt+C/W/X` 切换大小写 / 整词 / 正则；结果大预览 |
+| 鼠标 | 点击、`Ctrl+单击` 跳转、`Shift+滚轮` 横向滚动、拖选复制，tmux 里也能用 |
 | 各类文件 | XML/pom、YAML、properties、JSON、SQL、Shell、Dockerfile、前端、Python、Markdown（直接渲染）等 |
-| 浏览器 | 内嵌 Nerd Font，任何设备打开图标都正常；带登录密码 |
+| 浏览器 | 内嵌 Nerd Font，任何设备打开图标都正常；带登录密码；复制内容进入当前设备剪贴板 |
+| 链接 | Claude Code 等程序里的链接自动用 Windows 浏览器打开；`前缀 u` 列出面板里的链接 |
+
+## 快速开始
+
+```powershell
+# Windows PowerShell：下载并做 Windows 端设置（字体、网络、防火墙）
+git clone https://github.com/caokang1/tmux-nvim-kit.git D:\tmux-nvim-kit
+cd D:\tmux-nvim-kit
+powershell -ExecutionPolicy Bypass -File windows\setup.ps1 -PrivateNetwork
+powershell -ExecutionPolicy Bypass -File windows\wt-keys.ps1   # 可选：Windows Terminal 支持 Ctrl+Shift 快捷键
+wsl --shutdown
+```
+
+```bash
+# Ubuntu：安装（20～30 分钟）
+cd /mnt/d/tmux-nvim-kit
+./install.sh --proxy http://127.0.0.1:7890 --password 你的密码
+
+# 使用：项目建议放在 WSL 里（如 ~/project），放在 /mnt/d 上会慢很多
+tmux new -A -s code
+cd ~/project && nvim .
+```
+
+详细步骤和参数见下文。
+
+## 目录
+
+- [一、安装](#一安装)
+- [二、日常使用](#二日常使用)
+- [三、常见问题](#三常见问题)
+- [四、卸载](#四卸载)
+- [目录说明](#目录说明)
 
 ---
 
@@ -28,7 +75,7 @@
 
 ### 第 1 步：Windows 端设置（字体、网络、防火墙）
 
-把整个 `tmux-nvim-kit` 文件夹放到任意位置（比如 `D:\tmux-nvim-kit`），在 PowerShell 里运行：
+用 `git clone https://github.com/caokang1/tmux-nvim-kit.git D:\tmux-nvim-kit` 下载（或在 GitHub 页面 Code → Download ZIP 解压），放到任意位置都可以，在 PowerShell 里运行：
 
 ```powershell
 cd D:\tmux-nvim-kit
@@ -258,6 +305,9 @@ config/nvim/          Neovim 配置（LazyVim），lazy-lock.json 锁定插件�
   lua/plugins/idea-ui.lua    IDEA 式界面行为
   lua/plugins/explorer.lua   文件树
   lua/plugins/markdown.lua   Markdown 渲染
+  lua/config/idea_keys.lua   IDEA 快捷键（Windows 默认键位）
+  lua/config/find_bar.lua    Ctrl+F 查找栏
+  lua/config/zh*.lua         中文按键提示、F1 帮助面板
 config/tmux.conf      tmux 配置
 bin/win-open          用 Windows 默认浏览器打开链接（BROWSER 变量指向它）
 bin/tmux-open-url     tmux 前缀 u：列出面板里的链接并打开
