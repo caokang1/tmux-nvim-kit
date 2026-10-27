@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# 浏览器访问的管理命令
+#   tmux-web-ctl url              显示访问地址和账号
+#   tmux-web-ctl passwd <新密码>   修改密码
+#   tmux-web-ctl user <用户名>     修改登录用户名
+#   tmux-web-ctl port <端口>       修改端口（Windows 防火墙规则需另外放行）
+#   tmux-web-ctl font <字号>       修改浏览器里的字号
+#   tmux-web-ctl dir <目录>        新建 tmux 会话时的起始目录（如 ~/project）
+#   tmux-web-ctl status|restart|stop|start
+set -e
+ENV="$HOME/.config/tmux-web/env"
+[ -f "$ENV" ] || { echo "未找到 $ENV，请先运行 install.sh"; exit 1; }
+
+set_var() { # 更新 env 文件中的一项
+  local key=$1 val=$2
+  { grep -v "^$key=" "$ENV" || true; printf '%s=%q\n' "$key" "$val"; } >"$ENV.tmp"
+  chmod 600 "$ENV.tmp"
+  mv "$ENV.tmp" "$ENV"
+}
+
+show_url() {
+  # shellcheck source=/dev/null
+  source "$ENV"
+  local ips ip
+  ips=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | grep -v '^10\.255\.255\.254$' || true)
+  ip=$( (echo "$ips" | grep '^192\.168\.'; echo "$ips" | grep -E '^(10|172)\.') | head -1)
+  echo "本机访问:   http://localhost:${TMUX_WEB_PORT}"
+  echo "内网访问:   http://${ip:-<本机IP>}:${TMUX_WEB_PORT}"
+  echo "用户名:     ${TMUX_WEB_USER}"
+  echo "密码:       ${TMUX_WEB_PASSWORD}"
+  echo "tmux 会话:  ${TMUX_WEB_SESSION}"
+}
+
+case "$1" in
+  url | "") show_url ;;
+  passwd)
+    [ -n "$2" ] || { echo "用法: tmux-web-ctl passwd <新密码>"; exit 1; }
+    set_var TMUX_WEB_PASSWORD "$2"; sudo systemctl restart tmux-web; echo "密码已修改，已打开的网页请刷新后重新登录" ;;
+  user)
+    [ -n "$2" ] || { echo "用法: tmux-web-ctl user <用户名>"; exit 1; }
+    set_var TMUX_WEB_USER "$2"; sudo systemctl restart tmux-web; echo "用户名已修改" ;;
+  port)
+    [[ "$2" =~ ^[0-9]+$ ]] || { echo "用法: tmux-web-ctl port <端口>"; exit 1; }
+    set_var TMUX_WEB_PORT "$2"; sudo systemctl restart tmux-web
+    echo "端口已改为 $2。别的电脑要访问，还需在 Windows 管理员 PowerShell 里运行: windows\\setup.ps1 -Port $2" ;;
+  dir)
+    [ -d "$2" ] || { echo "用法: tmux-web-ctl dir <目录>（目录需存在，建议用 WSL 里的目录，如 ~/project）"; exit 1; }
+    set_var TMUX_WEB_DIR "$(cd "$2" && pwd)"
+    echo "已设置。下次新建 tmux 会话（如重启电脑后）将从 $(cd "$2" && pwd) 开始；已有会话不受影响" ;;
+  font)
+    [[ "$2" =~ ^[0-9]+$ ]] || { echo "用法: tmux-web-ctl font <字号>"; exit 1; }
+    set_var TMUX_WEB_FONT_SIZE "$2"; sudo systemctl restart tmux-web; echo "字号已改为 $2，刷新网页生效" ;;
+  status) systemctl status tmux-web --no-pager ;;
+  restart | stop | start) sudo systemctl "$1" tmux-web; echo "已$1" ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# //' ;;
+esac

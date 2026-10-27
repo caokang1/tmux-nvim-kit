@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# 由 tmux-web.service 调用：通过 ttyd 在浏览器里接入 tmux 会话（不存在则新建）
+# 配置文件：~/.config/tmux-web/env（用 tmux-web-ctl 修改）
+set -e
+C="$HOME/.config/tmux-web"
+# shellcheck source=/dev/null
+source "$C/env"
+
+INDEX_ARGS=()
+[ -f "$C/index.html" ] && INDEX_ARGS=(-I "$C/index.html")
+
+exec /usr/bin/ttyd -W -p "${TMUX_WEB_PORT:-7681}" \
+  -c "${TMUX_WEB_USER}:${TMUX_WEB_PASSWORD}" \
+  "${INDEX_ARGS[@]}" \
+  -t "fontSize=${TMUX_WEB_FONT_SIZE:-14}" \
+  -t lineHeight=1.2 \
+  -t 'fontFamily="JetBrainsMono NFM", "JetBrainsMono Nerd Font Mono", monospace' \
+  -t titleFixed=tmux \
+  -t 'theme={"background":"#1E1F22","foreground":"#BCBEC4","cursor":"#CED0D6","selectionBackground":"#214283"}' \
+  tmux new -A -s "${TMUX_WEB_SESSION:-code}" -c "${TMUX_WEB_DIR:-$HOME}"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# 在 Windows 默认浏览器 / 默认程序中打开链接或文件
+# WSL 不继承 Windows PATH 时 xdg-open 找不到浏览器，Claude Code 等程序通过 BROWSER=win-open 打开链接
+[ -n "$1" ] || { echo "用法: win-open <链接或文件>"; exit 1; }
+t=$1
+case "$t" in
+  *://* | mailto:*) ;;
+  *) [ -e "$t" ] && t=$(wslpath -w "$t") ;;
+esac
+# explorer.exe 打开成功也会返回 1，忽略
+/mnt/c/Windows/explorer.exe "$t" >/dev/null 2>&1
+exit 0
