@@ -7,6 +7,7 @@
 ![Neovim](https://img.shields.io/badge/Neovim-0.11+-57A143)
 ![tmux](https://img.shields.io/badge/tmux-3.4+-1BB91F)
 ![语言](https://img.shields.io/badge/文档-中文-red)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## 为什么用它
 
@@ -225,6 +226,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 - 在 tmux 里 `Shift+Enter` 换行已配置好（Windows Terminal 中有效；浏览器里用 `\` + Enter）
 - Claude Code 的 `Ctrl+b`（转后台）会被 tmux 截走，要**连按两次 `Ctrl+b`**
 - 推荐布局：`前缀 %` 分屏，左边 nvim 看代码，右边 `claude`
+- 离开电脑时想知道 Claude 什么时候跑完：配合 [claude-code-wecom-notify](https://github.com/caokang1/claude-code-wecom-notify)，回答完成后推送提醒到企业微信 / 飞书
 - 打开 Claude 给出的链接（在线文档等）：Claude 会自动用 Windows 默认浏览器打开（安装时已设置 `BROWSER=win-open`，旧终端需重新打开）；手动打开用 `前缀 u` 选择，或在 Windows Terminal 里按住 `Ctrl+Shift` 单击链接
 
 ---
@@ -313,3 +315,7 @@ bin/win-open          用 Windows 默认浏览器打开链接（BROWSER 变量�
 bin/tmux-open-url     tmux 前缀 u：列出面板里的链接并打开
 web/                  浏览器访问（ttyd）：启动脚本、systemd 服务、管理命令、嵌入字体的网页生成
 ```
+
+## License
+
+MIT
