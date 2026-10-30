@@ -109,7 +109,7 @@ cd /mnt/d/tmux-nvim-kit
 | `--password <密码>` | 浏览器访问密码（不填会随机生成，装完显示） |
 | `--user <用户名>` | 浏览器登录用户名（默认是 Ubuntu 用户名） |
 | `--port <端口>` | 浏览器访问端口（默认 7681） |
-| `--proxy <地址>` | 代理，如 Clash 的 `http://127.0.0.1:7890`。Java/Maven 默认不走系统代理，用了这个参数才会走 |
+| `--proxy <地址>` | 代理，如 Clash 的 `http://127.0.0.1:7890`。Java/Maven 默认不走系统代理，用了这个参数才会走；不填时，浏览器里的 tmux 沿用安装时终端里的代理 |
 | `--maven-settings <路径>` | 复制一份公司的 Maven 配置，如 `/mnt/c/Users/你的名字/.m2/settings.xml` |
 | `--no-web` | 不装浏览器访问 |
 | `--no-windows-path` | Ubuntu 不再继承 Windows 的 PATH（命令查找更快，避免误用 Windows 版程序）；需 `wsl --shutdown` 后生效 |
@@ -165,7 +165,7 @@ nvim .                           # 打开
 
 **查找（`Ctrl+F`）**：和 IDEA 一样在编辑区右上角弹出查找栏，边输入边高亮全部匹配并显示 `3/12`；回车 / `F3` / `↓` 下一个，`↑` / `Shift+F3` 上一个；`Alt+C` 区分大小写、`Alt+W` 整词、`Alt+X` 正则，`Ctrl+R` 转到替换；`Esc` 关闭，光标停在当前匹配处。找不到时显示"0 个结果"，不会报错。再次打开时会预填上次的内容并选中，直接输入即可替换。
 
-**粘贴**：浏览器里 `Ctrl+V` 粘贴的是在编辑器里复制的内容，从外部（如微信、网页）复制的内容用 `Ctrl+Shift+V` 粘贴；Windows Terminal 里 `Ctrl+V` 直接粘贴系统剪贴板。
+**粘贴**：Windows Terminal 和浏览器里 `Ctrl+V` 都直接粘贴系统剪贴板（编辑器里 `y` / `Ctrl+C` 复制的内容也会进入系统剪贴板）；`Ctrl+Shift+V` 同样可以粘贴。
 
 退出：`:qa`。
 
@@ -196,6 +196,8 @@ nvim .                           # 打开
 
 鼠标拖选文字时会进入 tmux 的**复制模式**（面板右上角出现 `[0/28]` 这样的行号），此时按 `Ctrl+C` 复制；复制模式下键盘输入不会传给程序，**单击一下面板或按 `Esc`** 即可退出。
 
+Claude Code、Neovim 这类自己处理鼠标的程序里，拖选交给程序本身，不会进入 tmux 复制模式。任何时候都可以**按住 `Shift` 拖选**：浏览器里松开鼠标即复制，Windows Terminal 里再按 `Ctrl+Shift+C`。
+
 ### 浏览器访问
 
 ```bash
@@ -205,7 +207,9 @@ tmux-web-ctl url                 # 显示访问地址、用户名、密码
 - 本机：`http://localhost:7681`；内网其他设备：`http://<本机内网IP>:7681`
 - 浏览器里看到的就是 `code` 会话，和本地终端同一个画面，两边实时同步
 - 注意：`Ctrl+W`、`Ctrl+T` 会被浏览器截走（关闭/新建标签页），Neovim 里的窗口操作改用 `空格 w`
-- 复制：Neovim 里 `y` 复制的内容会进入**当前设备**的剪贴板；粘贴用 `Ctrl+Shift+V`
+- 复制：Neovim 里 `y`、tmux 复制模式里 `Ctrl+C` 复制的内容会进入**当前设备**的剪贴板；`Shift+拖选` 松开即复制，选中后 `Ctrl+Shift+C` 也可以
+- 浏览器不允许程序随时写剪贴板，偶尔会提示"点一下页面或按任意键完成复制"，照做即可
+- 粘贴：`Ctrl+V` 或 `Ctrl+Shift+V`，粘贴的是当前设备的剪贴板
 
 管理命令：
 
@@ -213,6 +217,7 @@ tmux-web-ctl url                 # 显示访问地址、用户名、密码
 tmux-web-ctl passwd 新密码        # 改密码
 tmux-web-ctl port 8080           # 改端口（Windows 防火墙需重新运行 setup.ps1 -Port 8080）
 tmux-web-ctl font 16             # 改浏览器字号
+tmux-web-ctl proxy http://127.0.0.1:7890   # 浏览器里 tmux 中程序联网用的代理（off 关闭）
 tmux-web-ctl dir ~/project       # 新建 tmux 会话时的起始目录（建议用 WSL 里的项目目录）
 tmux-web-ctl status | restart | stop | start
 ```
@@ -238,6 +243,16 @@ Windows 把当前网络标记成了"公用网络"，防火墙规则不生效。�
 
 **电脑重启后网页打不开**
 浏览器访问服务随 Ubuntu 启动，先打开一次 Ubuntu 终端即可。检查：`tmux-web-ctl status`。
+
+**浏览器里 Claude Code 连不上（`ECONNRESET`、一直重试），Windows Terminal 里正常**
+- 原因：WSL 只给从 Windows 打开的终端自动设置代理（`.wslconfig` 的 `autoProxy`），浏览器里的 tmux 由系统服务启动，拿不到代理
+- 解决：`tmux-web-ctl proxy http://127.0.0.1:7890`（换成你的代理地址），然后退出 claude，在新窗口（`前缀 c`）重新运行 `claude --continue`
+- 网页本身打不开、报 502：浏览器访问 `localhost` / 内网 IP 也走了代理，在 Clash 等代理软件的绕过列表里加上 `localhost`、`127.0.0.1`、`192.168.*`
+
+**浏览器里复制 / 粘贴不了**
+- 复制：在 Claude Code、Neovim 里用 `Shift+拖选`，松开即复制；提示"点一下页面或按任意键完成复制"时照做
+- 粘贴：`Ctrl+V` 或 `Ctrl+Shift+V`；仍不行的话检查浏览器是否禁止了该网站的剪贴板权限
+- 旧版安装需更新网页：重新运行 `install.sh`
 
 **按 `前缀 %` 没有分屏**
 - 先看状态栏窗口名后有没有 `[已放大 前缀z还原]`：窗口被放大（`前缀 z`）时只显示一个面板，其实已经分屏了，按 `前缀 z` 还原

@@ -6,6 +6,7 @@
 #   tmux-web-ctl port <端口>       修改端口（Windows 防火墙规则需另外放行）
 #   tmux-web-ctl font <字号>       修改浏览器里的字号
 #   tmux-web-ctl dir <目录>        新建 tmux 会话时的起始目录（如 ~/project）
+#   tmux-web-ctl proxy <地址|off>  浏览器里 tmux 中程序联网用的代理（如 http://127.0.0.1:7890）
 #   tmux-web-ctl status|restart|stop|start
 set -e
 ENV="$HOME/.config/tmux-web/env"
@@ -29,6 +30,7 @@ show_url() {
   echo "用户名:     ${TMUX_WEB_USER}"
   echo "密码:       ${TMUX_WEB_PASSWORD}"
   echo "tmux 会话:  ${TMUX_WEB_SESSION}"
+  echo "代理:       ${TMUX_WEB_PROXY:-未设置}"
 }
 
 case "$1" in
@@ -50,7 +52,17 @@ case "$1" in
   font)
     [[ "$2" =~ ^[0-9]+$ ]] || { echo "用法: tmux-web-ctl font <字号>"; exit 1; }
     set_var TMUX_WEB_FONT_SIZE "$2"; sudo systemctl restart tmux-web; echo "字号已改为 $2，刷新网页生效" ;;
+  proxy)
+    [ -n "$2" ] || { echo "用法: tmux-web-ctl proxy <http://主机:端口 | off>"; exit 1; }
+    p="$2"; [ "$p" = off ] && p=""
+    set_var TMUX_WEB_PROXY "$p"
+    # 已在运行的 tmux 里新开的窗口立即生效；已经在跑的程序（如 claude）需退出后在新窗口重新启动
+    for v in http_proxy https_proxy HTTP_PROXY HTTPS_PROXY; do
+      if [ -n "$p" ]; then tmux set-environment -g "$v" "$p"; else tmux set-environment -gu "$v"; fi 2>/dev/null || true
+    done
+    if [ -n "$p" ]; then echo "代理已设为 $p"; else echo "代理已关闭"; fi
+    echo "tmux 新开的窗口生效，已在运行的程序需重新启动" ;;
   status) systemctl status tmux-web --no-pager ;;
   restart | stop | start) sudo systemctl "$1" tmux-web; echo "已$1" ;;
-  *) sed -n '2,10p' "$0" | sed 's/^# //' ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# //' ;;
 esac

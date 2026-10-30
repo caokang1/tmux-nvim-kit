@@ -7,7 +7,7 @@
 #   --user <用户名>           浏览器登录用户名（默认当前 Linux 用户名）
 #   --port <端口>             浏览器访问端口（默认 7681）
 #   --session <名称>          浏览器接入的 tmux 会话名（默认 code）
-#   --proxy <http://主机:端口> Java/Maven 走的代理（如 Clash: http://127.0.0.1:7890）
+#   --proxy <http://主机:端口> Java/Maven 和浏览器里的 tmux 走的代理（如 Clash: http://127.0.0.1:7890）
 #   --maven-settings <路径>   复制一份 Maven settings.xml（如 /mnt/c/Users/xxx/.m2/settings.xml）
 #   --no-web                  不安装浏览器访问
 #   --no-windows-path         WSL 不再把 Windows 的 PATH 加进来（更快，需重启 WSL）
@@ -217,6 +217,8 @@ TMUX_WEB_SESSION=$(printf '%q' "$WEB_SESSION")
 TMUX_WEB_FONT_SIZE=14
 # 新建 tmux 会话时的起始目录（建议改成 WSL 里的项目目录，如 \$HOME/project；用 tmux-web-ctl dir 修改）
 TMUX_WEB_DIR=\$HOME
+# 浏览器里的 tmux 由系统服务启动，拿不到 WSL 自动设置的代理，联网（如 Claude Code）用这里的代理；用 tmux-web-ctl proxy 修改
+TMUX_WEB_PROXY=$(printf '%q' "${http_proxy:-${HTTP_PROXY:-}}")
 EOF
   umask 022
 

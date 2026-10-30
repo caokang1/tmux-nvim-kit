@@ -6,6 +6,12 @@ C="$HOME/.config/tmux-web"
 # shellcheck source=/dev/null
 source "$C/env"
 
+# 系统服务拿不到 WSL 为终端自动设置的代理，这里补上，浏览器里 tmux 中的程序（如 Claude Code）才能联网
+if [ -n "${TMUX_WEB_PROXY:-}" ]; then
+  export http_proxy="$TMUX_WEB_PROXY" https_proxy="$TMUX_WEB_PROXY" HTTP_PROXY="$TMUX_WEB_PROXY" HTTPS_PROXY="$TMUX_WEB_PROXY"
+  export no_proxy="localhost,127.0.0.1,::1" NO_PROXY="localhost,127.0.0.1,::1"
+fi
+
 INDEX_ARGS=()
 [ -f "$C/index.html" ] && INDEX_ARGS=(-I "$C/index.html")
 

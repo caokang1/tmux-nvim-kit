@@ -133,11 +133,11 @@ map("v", "<C-c>", '"+y', "复制到系统剪贴板")
 map("n", "<C-x>", '"+dd', "剪切当前行")
 map("i", "<C-x>", '<C-o>"+dd', "剪切当前行")
 map("v", "<C-x>", '"+d', "剪切")
--- 浏览器里 Ctrl+V 粘贴的是编辑器里复制的内容；外部复制的内容用 Ctrl+Shift+V（Windows Terminal 里 Ctrl+V 直接粘贴系统剪贴板）
+-- Windows Terminal 和浏览器会先截走 Ctrl+V，直接粘贴系统剪贴板；其他终端里 Ctrl+V 粘贴编辑器里复制的内容
 -- 编辑器里还没复制过内容时给出提示，而不是报 E353
 local function paste_or_hint()
   if vim.fn.getreg('"') == "" then
-    vim.notify("编辑器里还没有复制过内容。从外部复制的内容：浏览器里用 Ctrl+Shift+V 粘贴", vim.log.levels.INFO)
+    vim.notify("编辑器里还没有复制过内容。从外部复制的内容用 Ctrl+Shift+V 粘贴", vim.log.levels.INFO)
     return
   end
   vim.cmd('normal! ""P')
