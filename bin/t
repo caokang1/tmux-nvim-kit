@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# t：进入 / 切换 tmux 会话（代替 tmux new -A -s 和 tmux attach -t，tmux 里外都能用）
+#   t          列出会话，上下键选择、回车进入；输入一个新名字回车则新建（没有任何会话时直接新建 code）
+#   t <名字>   进入该会话，不存在则新建
+
+go() {
+  if [ -n "$TMUX" ]; then
+    # 已在 tmux 里：直接切过去，不会出现 tmux 套 tmux
+    tmux has-session -t "=$1" 2>/dev/null || tmux new-session -d -s "$1" || exit 1
+    exec tmux switch-client -t "=$1"
+  else
+    exec tmux new-session -A -s "$1"
+  fi
+}
+
+[ -n "$1" ] && go "$1"
+
+list=$(tmux list-sessions -F '#{session_name}	#{session_windows} 个窗口#{?session_attached,  (已打开),}' 2>/dev/null)
+[ -z "$list" ] && go code
+if [ -z "$TMUX" ] && [ "$(wc -l <<<"$list")" -eq 1 ]; then
+  go "${list%%	*}"
+fi
+
+out=$(fzf --reverse --height 40% --delimiter '\t' --print-query \
+  --prompt '会话> ' --header '回车进入，Esc 取消；输入新名字回车可新建' <<<"$list")
+[ $? -eq 130 ] && exit 0
+query=$(sed -n 1p <<<"$out")
+pick=$(sed -n 2p <<<"$out" | cut -f1)
+[ -n "$pick" ] && go "$pick"
+[ -n "$query" ] && go "$query"

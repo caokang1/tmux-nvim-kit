@@ -50,7 +50,7 @@ cd /mnt/d/tmux-nvim-kit
 ./install.sh --proxy http://127.0.0.1:7890 --password 你的密码
 
 # 使用：项目建议放在 WSL 里（如 ~/project），放在 /mnt/d 上会慢很多
-tmux new -A -s code
+t code                           # 进入 code 会话（tmux 里忘了按键就按 Ctrl+b 再按 ?）
 cd ~/project && nvim .
 ```
 
@@ -125,7 +125,7 @@ cd /mnt/d/tmux-nvim-kit
 ### 打开项目
 
 ```bash
-tmux new -A -s code              # 进入 code 会话（浏览器看到的就是它；已存在则直接进入）
+t code                           # 进入 code 会话（浏览器看到的就是它；已存在则直接进入）
 cd /mnt/d/work/你的项目           # 进入项目根目录（pom.xml 所在那层）
 nvim .                           # 打开
 ```
@@ -177,6 +177,8 @@ nvim .                           # 打开
 
 ### tmux：前缀键 `Ctrl+b`（先按 Ctrl+b，松开，再按后面的键）
 
+**记不住就按 `前缀 ?`**：弹出中文速查表（下表的按键 + 常用命令），按 `q` 或 `Esc` 关闭。tmux 原来的英文全部按键列表改到了 `前缀 Alt+?`。
+
 | 操作 | 按键 |
 |---|---|
 | 新建窗口（每个项目一个） | `前缀 c` |
@@ -184,11 +186,18 @@ nvim .                           # 打开
 | 左右 / 上下分屏 | `前缀 %` / `前缀 "` |
 | 在分屏间移动 | 鼠标点击，或 `前缀 方向键` |
 | 放大/还原当前分屏 | `前缀 z` |
-| 列出/切换会话 | `前缀 s` |
-| 暂时离开（程序继续运行） | `前缀 d`，回来用 `tmux new -A -s code` |
+| 切换会话（不用先退出） | `前缀 s`，方向键选择、回车进入 |
+| 暂时离开（程序继续运行） | `前缀 d`，回来用 `t code` |
 | 关闭当前分屏 / 窗口 | `前缀 x` / `前缀 &`，然后按 `y` 确认 |
 | 重新加载配置 | `前缀 r` |
 | 打开面板里的链接 | `前缀 u`（列出最近的链接，选中后在 Windows 浏览器打开） |
+
+进入 / 切换会话用 `t` 命令，代替 `tmux new -A -s 名字` 和 `tmux attach -t 名字`，tmux 里外都能用：
+
+```bash
+t                                # 列出所有会话，方向键选择、回车进入；输入一个新名字回车则新建
+t 名字                           # 进入这个会话，不存在就新建（在 tmux 里会直接切过去，不会套娃）
+```
 
 分屏时每个面板顶部会显示编号和项目名；底部状态栏的窗口名自动显示为项目目录名。窗口处于放大状态时，窗口名后会显示 `[已放大 前缀z还原]`。
 
@@ -328,6 +337,8 @@ config/nvim/          Neovim 配置（LazyVim），lazy-lock.json 锁定插件�
 config/tmux.conf      tmux 配置
 bin/win-open          用 Windows 默认浏览器打开链接（BROWSER 变量指向它）
 bin/tmux-open-url     tmux 前缀 u：列出面板里的链接并打开
+bin/tmux-help         tmux 前缀 ?：中文速查表
+bin/t                 进入 / 切换 tmux 会话
 web/                  浏览器访问（ttyd）：启动脚本、systemd 服务、管理命令、嵌入字体的网页生成
 ```
 

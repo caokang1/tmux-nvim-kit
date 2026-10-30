@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# tmux 前缀+?：在弹出窗口里显示中文速查表，按 q 或 Esc 关闭（只看，不执行任何操作）
+H=$'\e[1;38;2;187;154;247m' K=$'\e[38;2;158;206;106m' T=$'\e[1;38;2;122;162;247m'
+D=$'\e[38;2;86;95;137m' W=$'\e[38;2;224;175;104m' R=$'\e[0m'
+
+# 按显示宽度补齐按键列（中文占两格，printf 的 %-Ns 按字节算会错位）
+row() {
+  local pad=$((28 - $(printf '%s' "$1" | wc -L)))
+  printf '  %s%s%*s%s%s\n' "$K" "$1" "$pad" '' "$R" "$2"
+}
+
+clear
+printf '\e[?25l'   # 隐藏光标
+cat <<EOF
+ ${T}tmux 速查${R}  ${D}前缀 = 先按 Ctrl+b，松开，再按后面的键${R}
+
+ ${H}会话${R}
+EOF
+row '前缀 s' '切换会话（不用先退出，方向键选、回车进入）'
+row '前缀 d' '暂时离开 tmux（程序继续运行）'
+printf '\n %s窗口（每个项目一个）%s\n' "$H" "$R"
+row '前缀 c' '新建窗口'
+row '前缀 1~9 / n / p' '切到第几个 / 下一个 / 上一个窗口'
+row '前缀 w' '列出所有窗口来选'
+row '前缀 &' '关闭当前窗口（按 y 确认）'
+printf '\n %s分屏%s\n' "$H" "$R"
+row '前缀 % / 前缀 "' '左右分屏 / 上下分屏'
+row '前缀 方向键' '移到旁边的分屏（也可以鼠标点）'
+row '前缀 z' '放大 / 还原当前分屏'
+row '前缀 x' '关闭当前分屏（按 y 确认）'
+printf '\n %s其他%s\n' "$H" "$R"
+row '前缀 u' '打开面板里的链接'
+row '前缀 r' '重新加载配置'
+row '拖选 + Ctrl+C' '复制；单击面板或 Esc 退出复制模式'
+row '前缀 Alt+?' '全部按键列表（英文）'
+printf '\n %s命令（在终端里输入）%s\n' "$H" "$R"
+row 't' '选择会话进入（没有就新建 code）'
+row 't 名字' '进入这个会话，没有就新建'
+row 'tmux kill-session -t 名字' '关闭一个会话'
+row 'tmux-web-ctl url' '浏览器访问地址、用户名、密码'
+row 'tmux-web-ctl passwd 新密码' '改浏览器访问密码'
+row 'tmux-web-ctl status' '浏览器访问服务状态（restart 重启）'
+printf '\n %s按快捷键前切到英文输入法：中文输入法下 %% " & 会变成全角，tmux 不认%s\n' "$W" "$R"
+printf ' %s按 q 或 Esc 关闭%s' "$D" "$R"
+
+while IFS= read -rsn1 k; do
+  case $k in q | Q | $'\e') break ;; esac
+done
