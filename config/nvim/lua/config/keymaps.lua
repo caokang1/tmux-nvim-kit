@@ -12,6 +12,8 @@ vim.keymap.set("n", "q", "<Nop>", { desc = "已禁用：录宏请用 Q" })
 
 -- IDEA 快捷键（Ctrl+D 复制行、Alt+Enter、Shift+F6 等）
 require("config.idea_keys")
+-- 逆向 IDEA 的扩展功能（跳转、层级、Spring/MyBatis、书签……），每个功能一个文件，见 lua/config/kit/
+require("config.kit")
 
 -- 和 IDEA 一样：Shift+滚轮横向滚动（触控板左右滑动也会转成这个），滚动的是鼠标所在的窗口，
 -- 所以编辑区和弹框（预览等）都能横向看长代码
@@ -33,5 +35,11 @@ end
 -- 和 IDEA 一样：按住 Ctrl 或 Alt 鼠标左键点击变量 / 方法 / 类，跳转到定义（Ctrl+o 跳回）
 -- 先把光标移到点击处，再执行 gd（有语言服务时是跳转到定义，否则跳到当前文件里的声明）
 for _, lhs in ipairs({ "<C-LeftMouse>", "<M-LeftMouse>" }) do
-  vim.keymap.set("n", lhs, "<LeftMouse>gd", { remap = true, desc = "跳转到定义（Ctrl/Alt+点击）" })
+  vim.keymap.set("n", lhs, function()
+    local pos = vim.fn.getmousepos()
+    if pos.winid == 0 or pos.line == 0 then return end
+    vim.api.nvim_set_current_win(pos.winid)
+    pcall(vim.api.nvim_win_set_cursor, pos.winid, { pos.line, math.max(pos.column - 1, 0) })
+    require("config.idea_keys").definition()
+  end, { desc = "跳转到定义（Ctrl/Alt+点击）" })
 end

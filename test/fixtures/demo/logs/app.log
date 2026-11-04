@@ -1,0 +1,7 @@
+2026-11-04 10:00:00.123  INFO 1234 --- [main] com.example.demo.DemoApplication : Started DemoApplication
+2026-11-04 10:00:01.456  WARN 1234 --- [nio-8080-exec-1] o.s.web.servlet.PageNotFound : No mapping for GET /favicon.ico
+2026-11-04 10:00:02.789 ERROR 1234 --- [nio-8080-exec-2] o.a.c.c.C.[.[.[/].[dispatcherServlet] : Servlet.service() threw exception
+java.lang.NullPointerException: null
+	at com.example.demo.service.impl.UserServiceImpl.getUser(UserServiceImpl.java:26)
+	at com.example.demo.controller.UserController.detail(UserController.java:31)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)

@@ -4,7 +4,7 @@ return {
     opts = function(_, opts)
       -- 大项目给 jdtls 更多内存（本机 19G 内存）
       opts.cmd = opts.cmd or { vim.fn.exepath("jdtls") }
-      table.insert(opts.cmd, "--jvm-arg=-Xmx4g")
+      table.insert(opts.cmd, "--jvm-arg=-Xmx" .. (vim.env.NVIM_KIT_JDTLS_XMX or "4g"))
       -- 元数据（.project/.classpath/.settings）放到 jdtls 工作区，不写进项目目录；
       -- 必须作为 JVM 参数传入（VS Code Java 插件也是这么做的），只放在 settings 里不生效
       table.insert(opts.cmd, "--jvm-arg=-Djava.import.generatesMetadataFilesAtProjectRoot=false")

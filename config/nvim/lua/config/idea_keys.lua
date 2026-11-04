@@ -218,7 +218,10 @@ map("x", "<C-M-c>", "<Esc><Cmd>lua require('jdtls').extract_constant(true)<CR>",
 map(NI, "<C-M-n>", code_action("refactor.inline"), "内联")
 
 -- ================= 跳转 =================
+-- 跳转到声明：先依次询问 config.kit.goto 里登记的跳转提供者（MyBatis、配置项、在声明处显示用法等），
+-- 都不处理时再走语言服务的"跳转到定义"
 local function definition()
+  if require("config.kit.goto").run() then return end
   if has_lsp("textDocument/definition") then
     Snacks.picker.lsp_definitions()
   else
@@ -387,3 +390,6 @@ for _, L in ipairs({ "A", "B", "E", "F", "I", "J", "N", "R", "U", "W", "Z" }) do
     end
   end
 end
+
+-- 供 config/kit/ 下的功能模块复用同样的映射规则（输入模式、特殊窗口、浮窗处理）
+return { map = map, n = n, has_lsp = has_lsp, is_java = is_java, feed = feed, NI = NI, NIX = NIX, NX = NX, definition = definition }
