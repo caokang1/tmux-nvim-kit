@@ -54,6 +54,8 @@ if(b&&b!=="?"){try{copy(decode(b))}catch(e){}}return true})},200);
 # 这里改为发送扩展按键编码 ESC [ <小写字母编码> ; 6 u（6 = Ctrl+Shift），tmux 开了 extended-keys 会原样转给 Neovim。
 # Ctrl+Shift+V 留给浏览器粘贴；Ctrl+Shift+C 复制终端里选中的文字（Chrome 默认是打开开发者工具）；
 # Ctrl+Shift+N / T / W 浏览器不让网页拦截，按了也到不了这里。
+# Ctrl+Shift+Space（Search Everywhere，代替 IDEA 的双击 Shift）发送 ESC [ 32 ; 6 u：不改的话它和 Ctrl+Space 一样发出 NUL，
+# 会被 tmux 当成第二前缀 Ctrl+Space。
 # Ctrl+V 和 Windows Terminal 一样粘贴本机剪贴板：交给浏览器触发粘贴，不再作为按键发给程序。
 ctrl_shift = r"""<script>(function(){
 var keep={V:1};
@@ -61,6 +63,7 @@ var timer=setInterval(function(){var t=window.term;if(!t||!t.attachCustomKeyEven
 t.attachCustomKeyEventHandler(function(e){
 if(e.ctrlKey&&!e.shiftKey&&!e.altKey&&!e.metaKey&&e.code==="KeyV")return false;
 if(e.type!=="keydown"||!e.ctrlKey||!e.shiftKey||e.altKey||e.metaKey)return true;
+if(e.code==="Space"){e.preventDefault();t.input("\x1b[32;6u",true);return false}
 var m=/^Key([A-Z])$/.exec(e.code);if(!m||keep[m[1]])return true;
 if(m[1]==="C"){e.preventDefault();if(t.hasSelection()&&window.kitCopy)window.kitCopy(t.getSelection());return false}
 e.preventDefault();t.input("\x1b["+(m[1].charCodeAt(0)+32)+";6u",true);return false})},200);

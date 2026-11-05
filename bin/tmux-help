@@ -12,7 +12,8 @@ row() {
 clear
 printf '\e[?25l'   # 隐藏光标
 cat <<EOF
- ${T}tmux 速查${R}  ${D}前缀 = 先按 Ctrl+b，松开，再按后面的键${R}
+ ${T}tmux 速查${R}  ${D}前缀 = 先按 Ctrl+b 或 Ctrl+Space，松开，再按后面的键${R}
+ ${D}nvim 面板里 Ctrl+b 是"跳转到声明"，tmux 操作改用 Ctrl+Space；其他面板两个都行${R}
 
  ${H}会话${R}
 EOF
@@ -29,7 +30,9 @@ row '前缀 方向键' '移到旁边的分屏（也可以鼠标点）'
 row '前缀 z' '放大 / 还原当前分屏'
 row '前缀 x' '关闭当前分屏（按 y 确认）'
 printf '\n %s其他%s\n' "$H" "$R"
+row '前缀 j' '在 nvim 里打开其他面板中的 文件:行号 / Java 堆栈'
 row '前缀 u' '打开面板里的链接'
+row '前缀 Ctrl+b' '把 Ctrl+b 发给程序（Claude Code 转后台）'
 row '前缀 r' '重新加载配置'
 row '拖选 + Ctrl+C' '复制；单击面板或 Esc 退出复制模式'
 row '前缀 Alt+?' '全部按键列表（英文）'

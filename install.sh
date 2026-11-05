@@ -162,9 +162,9 @@ backup ~/.tmux.conf
 cp "$KIT_DIR/config/tmux.conf" ~/.tmux.conf
 tmux source-file ~/.tmux.conf 2>/dev/null || true
 # 打开链接：win-open 调用 Windows 浏览器，tmux-open-url 是 前缀 u 的链接菜单
-# t 进入 / 切换会话，tmux-help 是 前缀 ? 的中文速查表
+# t 进入 / 切换会话，tmux-help 是 前缀 ? 的中文速查表，tmux-jump 是 前缀 j（在 nvim 里打开 文件:行号 / 堆栈）
 mkdir -p ~/.local/bin
-install -m 755 "$KIT_DIR/bin/win-open" "$KIT_DIR/bin/tmux-open-url" "$KIT_DIR/bin/t" "$KIT_DIR/bin/tmux-help" ~/.local/bin/
+install -m 755 "$KIT_DIR/bin/win-open" "$KIT_DIR/bin/tmux-open-url" "$KIT_DIR/bin/t" "$KIT_DIR/bin/tmux-help" "$KIT_DIR/bin/tmux-jump" ~/.local/bin/
 if grep -qi microsoft /proc/version && ! grep -q 'BROWSER=' ~/.bashrc; then
   printf '\n# Claude Code 等程序打开链接时用 Windows 默认浏览器\nexport BROWSER="$HOME/.local/bin/win-open"\n' >>~/.bashrc
 fi

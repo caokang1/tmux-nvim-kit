@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# tmux 前缀+j：从当前窗口其他面板（Claude Code 输出、日志、编译错误）里提取可跳转的位置，
+# 选中后在同一窗口的 Neovim 里打开并定位到行，焦点切到 Neovim（IDEA 的"分析堆栈"）。
+#   能识别：路径:行[:列]、路径#L行、@路径#L起-止（Claude Code 的引用）、Java 堆栈 at a.b.C.m(C.java:42)
+#   Neovim 启动时把自己的 socket 登记在面板选项 @nvim_socket、获得焦点的时间登记在 @nvim_focus
+#   （见 config/nvim/lua/config/kit/tmux_bridge.lua），窗口里有多个 Neovim 时用最近获得焦点的那个。
+#
+#   tmux-jump <窗口> <面板> <客户端>        tmux 按键调用：抓取、解析、弹出选择框
+#   tmux-jump --parse-only [文件] [--cwd 目录]...
+#       只解析（测试用）：从文件或标准输入读文本，按"最近的在前"去重输出
+#       不带 --cwd：每行 类型<TAB>路径<TAB>行<TAB>列<TAB>原文（Java 堆栈的路径是 包路径/文件名）
+#       带 --cwd：  在这些目录下解析成真实文件，只输出存在的：绝对路径<TAB>行<TAB>列<TAB>原文
+#                   相对路径依次相对每个目录查找；Java 堆栈在第一个目录（项目根）里按 包路径/文件名 查找
+#       环境变量 TMUX_JUMP_DRY_RUN=1 时不弹窗，把选中的 nvim 面板和列表打印出来（测试用）
+#   tmux-jump --pick <列表文件> <nvim面板> <socket>    弹出窗口里运行的 fzf 选择（内部用）
+#   tmux-jump --open <socket> <nvim面板> <文件> <行> <列>   在 Neovim 里打开（内部用）
+#   tmux-jump --preview <文件> <行>                        fzf 预览（内部用）
+SELF="$(readlink -f "$0")"
+HISTORY_LINES=300
+
+# 解析：标准输入是文本，参数是 --cwd 的目录（可以没有）。逻辑和 tmux_bridge.lua 的 parse 保持一致，两边都有测试
+parse() {
+  perl -e '
+    use strict; use warnings;
+    my @bases = @ARGV;
+    my @lines = <STDIN>;
+    my $P = qr{[\w./~-]*\.[A-Za-z]\w*};            # 路径：必须带扩展名，避免把 10:00:01、localhost:8080 当成位置
+    my $NB = qr{(?<![\w./~:-])};                   # 前面不能紧挨路径字符或冒号（排除 https://x/a.js:1 这类 URL）
+    my $JAVA = qr{\bat\s+([^\s(]+)\(([\w\$]+\.[A-Za-z]+):(\d+)\)};
+    my (%seen, @out);
+    for my $l (reverse @lines) {
+      $l =~ s/[\r\n]+$//;
+      (my $ctx = $l) =~ s/^\s+|\s+$//g;
+      $ctx =~ s/\t/ /g;
+      my @hits;
+      while ($l =~ /$JAVA/g) {
+        my ($q, $file, $ln, $pos) = ($1, $2, $3, $-[0]);
+        $q =~ s{.*/}{};                            # 去掉模块前缀：app//、java.base/
+        (my $cls = $q) =~ s/\.[^.]*$//;            # 去掉方法名，剩下类的全名
+        my $pkg = $cls =~ /^(.*)\./ ? $1 : "";
+        $pkg =~ s{\.}{/}g;
+        push @hits, ["java", ($pkg ne "" ? "$pkg/" : "") . $file, $ln, 0, $pos];
+      }
+      (my $rest = $l) =~ s/$JAVA/" " x length($&)/ge;
+      while ($rest =~ /$NB($P)#L(\d+)/g) { push @hits, ["loc", $1, $2, 0, $-[0]] }
+      $rest =~ s/$NB$P#L\d+(?:-L?\d+)?/" " x length($&)/ge;
+      while ($rest =~ /$NB($P):(\d+)(?::(\d+))?/g) { push @hits, ["loc", $1, $2, $3 // 0, $-[0]] }
+      for my $h (sort { $a->[4] <=> $b->[4] } @hits) {
+        next if $seen{"$h->[0]\t$h->[1]\t$h->[2]"}++;
+        push @out, [@$h[0..3], $ctx];
+      }
+    }
+    if (!@bases) { print join("\t", @$_), "\n" for @out; exit 0 }
+
+    # Java 堆栈：一次 rg 找出所有涉及的文件名，再按包路径匹配
+    my %files = map { my ($f) = $_->[1] =~ m{([^/]+)$}; ($f => 1) } grep { $_->[0] eq "java" } @out;
+    my @found;
+    if (%files) {
+      my @cmd = ("rg", "--files", (map { ("-g", $_) } sort keys %files), $bases[0]);
+      open(my $fh, "-|", @cmd) or die;
+      @found = sort map { chomp; $_ } <$fh>;
+      close $fh;
+    }
+    my %done;
+    for my $o (@out) {
+      my ($kind, $path, $ln, $col, $ctx) = @$o;
+      my $abs;
+      if ($kind eq "java") {
+        ($abs) = grep { substr($_, -length("/$path")) eq "/$path" } @found;
+      } else {
+        $path =~ s{^~/}{$ENV{HOME}/};
+        if ($path =~ m{^/}) { $abs = $path if -f $path }
+        else { for my $b (@bases) { my $c = "$b/$path"; $c =~ s{/\./}{/}g; if (-f $c) { $abs = $c; last } } }
+      }
+      next unless defined $abs;
+      next if $done{"$abs\t$ln"}++;               # 堆栈行和 文件:行 指向同一处时只留一条
+      print join("\t", $abs, $ln, $col, $ctx), "\n";
+    }
+  ' -- "$@"
+}
+
+open_in_nvim() { # socket 面板 文件 行 列
+  local sock=$1 pane=$2 f=$3 l=${4:-1} c=${5:-0}
+  f=${f//\'/\'\'}
+  timeout 3 nvim --server "$sock" --remote-expr \
+    "luaeval('require(\"config.kit.tmux_bridge\").open(_A[1], _A[2], _A[3])', ['$f', $l, $c])" >/dev/null 2>&1 ||
+    { tmux display-message "nvim 没有响应（$sock）"; return 1; }
+  tmux select-window -t "$pane" \; select-pane -t "$pane"
+}
+
+case "$1" in
+--parse-only)
+  shift
+  in=/dev/stdin
+  if [ -n "$1" ] && [ "$1" != --cwd ]; then in=$1; shift; fi
+  dirs=()
+  while [ "$1" = --cwd ]; do dirs+=("$2"); shift 2; done
+  parse "${dirs[@]}" <"$in"
+  exit
+  ;;
+--open)
+  shift
+  open_in_nvim "$@"
+  exit
+  ;;
+--preview)
+  # 预览选中位置前后的代码，当前行反色
+  f=$2 l=${3:-1}
+  s=$((l > 8 ? l - 8 : 1))
+  awk -v s="$s" -v l="$l" 'NR >= s && NR < s + 200 {
+    if (NR == l) printf "\033[7m%5d  %s\033[0m\n", NR, $0; else printf "\033[2m%5d\033[0m  %s\n", NR, $0
+  } NR >= s + 200 { exit }' "$f"
+  exit
+  ;;
+--pick)
+  list=$2 pane=$3 sock=$4
+  trap 'rm -f "$list"' EXIT
+  sel=$(fzf --delimiter '\t' --with-nth 5 --no-sort --reverse --ansi \
+    --prompt '跳转> ' --header '回车在 nvim 中打开，Esc 取消（最近的在上面）' \
+    --preview "'$SELF' --preview {1} {2}" --preview-window 'down,50%,border-top' <"$list") || exit 0
+  IFS=$'\t' read -r f l c _ <<<"$sel"
+  open_in_nvim "$sock" "$pane" "$f" "$l" "$c"
+  exit
+  ;;
+esac
+
+# ---------------- tmux 按键调用 ----------------
+win=$1 cur=$2 client=$3
+msg() { tmux display-message -c "$client" -d 2500 "$1"; }
+
+# 找 Neovim 面板：登记了 socket 且 socket 还在；有多个时用最近获得焦点的
+US=$'\x1f'
+nvim_pane='' nvim_sock='' nvim_cwd='' best=-1
+others=()
+# 字段分隔用 \x1f：用 Tab 的话 read 会把连续的空字段（没登记 socket）合并掉
+while IFS=$'\x1f' read -r id cmd sock focus active cwd; do
+  if [ -n "$sock" ] || [[ $cmd =~ ^(n?vim|vi|view|nvimdiff)$ ]]; then
+    [ -n "$sock" ] && [ -S "$sock" ] || continue
+    score=${focus:-0}
+    [ "$active" = 1 ] && [ "$score" = 0 ] && score=1
+    if [ "$score" -gt "$best" ]; then best=$score nvim_pane=$id nvim_sock=$sock nvim_cwd=$cwd; fi
+  elif [ "$id" = "$cur" ]; then
+    others=("$id" "${others[@]}") # 按键时所在的面板排最前
+  else
+    others+=("$id")
+  fi
+done < <(tmux list-panes -t "$win" -F "#{pane_id}$US#{pane_current_command}$US#{@nvim_socket}$US#{@nvim_focus}$US#{pane_active}$US#{pane_current_path}")
+
+if [ -z "$nvim_pane" ]; then
+  msg '当前窗口没有打开的 nvim'
+  exit 0
+fi
+if [ ${#others[@]} -eq 0 ]; then
+  msg '当前窗口除了 nvim 没有其他面板'
+  exit 0
+fi
+
+list=$(mktemp "${TMPDIR:-/tmp}/tmux-jump.XXXXXX")
+for p in "${others[@]}"; do
+  pcwd=$(tmux display -p -t "$p" '#{pane_current_path}')
+  tmux capture-pane -J -p -S -"$HISTORY_LINES" -t "$p" | parse "$nvim_cwd" "$pcwd"
+done | awk -F'\t' '!seen[$1 FS $2]++' | head -500 |
+  # 第 5 列是显示内容：项目内文件显示相对路径
+  awk -F'\t' -v OFS='\t' -v root="$nvim_cwd/" -v hl=$'\033[36m' -v rs=$'\033[0m' '{
+    p = $1; if (index(p, root) == 1) p = substr(p, length(root) + 1)
+    ctx = $4; if (length(ctx) > 160) ctx = substr(ctx, 1, 157) "..."
+    print $1, $2, $3, $4, hl p ":" $2 rs "  " ctx
+  }' >"$list"
+
+if [ ! -s "$list" ]; then
+  rm -f "$list"
+  msg '其他面板里没有找到 文件:行号 或 Java 堆栈（项目里不存在的文件不列出）'
+  exit 0
+fi
+
+# 测试用：只输出列表，不弹窗
+if [ -n "$TMUX_JUMP_DRY_RUN" ]; then
+  printf 'nvim\t%s\t%s\n' "$nvim_pane" "$nvim_sock"
+  cat "$list"
+  rm -f "$list"
+  exit 0
+fi
+
+if command -v fzf >/dev/null; then
+  tmux display-popup -c "$client" -E -w 90% -h 80% -T ' 跳转到 nvim（前缀 j） ' -b rounded -S 'fg=#7aa2f7' \
+    "'$SELF' --pick '$list' '$nvim_pane' '$nvim_sock'"
+  exit 0
+fi
+
+# 没有 fzf：用 tmux 菜单，最多列 15 个
+args=()
+i=0
+while IFS=$'\t' read -r f l c _ disp && [ $i -lt 15 ]; do
+  i=$((i + 1))
+  label=${f#"$nvim_cwd"/}:$l
+  [ ${#label} -gt 80 ] && label="...${label: -77}"
+  q=${f//\'/}
+  args+=("${label//#/##}" "" "run-shell -b \"'$SELF' --open '$nvim_sock' '$nvim_pane' '$q' $l $c\"")
+done <"$list"
+rm -f "$list"
+tmux display-menu -c "$client" -t "$cur" -T '#[align=centre] 在 nvim 中打开（最近的在上） ' "${args[@]}"

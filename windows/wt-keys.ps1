@@ -2,6 +2,7 @@
   让 Windows Terminal 把 IDEA 用到的组合键原样交给 tmux / Neovim：
     * Ctrl+Shift+字母（V、C 除外，保留为终端的粘贴 / 复制）改为发送扩展按键编码 ESC [ <小写字母编码> ; 6 u，
       否则终端里 Ctrl+Shift+F 和 Ctrl+F 是同一个按键
+    * Ctrl+Shift+Space 发送 ESC [ 32 ; 6 u（Search Everywhere），不再和 Ctrl+Space（tmux 第二前缀）相同
     * Alt+Enter 不再切换全屏（IDEA 的意图操作）
   用法（不需要管理员）：powershell -ExecutionPolicy Bypass -File windows\wt-keys.ps1
   修改前会备份为 settings.json.bak-时间；改完 Windows Terminal 会自动重新加载设置。
@@ -25,6 +26,12 @@ foreach ($l in $letters) {
     command = [pscustomobject]@{ action = 'sendInput'; input = "$([char]27)[$code;6u" }
     keys    = "ctrl+shift+$("$l".ToLower())"
   }
+}
+# Ctrl+Shift+Space（Search Everywhere，代替 IDEA 的双击 Shift）：默认和 Ctrl+Space 一样发出 NUL，
+# 会被 tmux 当成第二前缀 Ctrl+Space，改为发送 ESC [ 32 ; 6 u
+$new += [pscustomobject]@{
+  command = [pscustomobject]@{ action = 'sendInput'; input = "$([char]27)[32;6u" }
+  keys    = 'ctrl+shift+space'
 }
 $new += [pscustomobject]@{ command = 'unbound'; keys = 'alt+enter' }
 
