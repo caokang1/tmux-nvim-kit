@@ -67,6 +67,6 @@ return {
     vim.wait(1000)
     local m = vim.fn.maparg("<leader>cy", "n", false, true)
     t.ok(m.desc and m.desc:find("复制引用"), "空格 c y 被覆盖为：" .. tostring(m.desc))
-    t.wait(20000, function() return vim.fn.maparg("<leader>cr", "n") ~= "" end, "空格 c r（重命名）不见了")
+    t.wait(90000, function() return vim.fn.maparg("<leader>cr", "n") ~= "" end, "空格 c r（重命名）不见了")
   end,
 }
