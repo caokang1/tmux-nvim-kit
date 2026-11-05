@@ -4,9 +4,9 @@
 --   * Ctrl+Shift+字母 和 Ctrl+字母 在普通终端里是同一个按键。浏览器页面和 Windows Terminal（wt-keys.ps1）
 --     已改为发送可区分的编码，文件末尾把 Ctrl+Shift+X 映射为和 Alt+Shift+X 相同；Alt+Shift+X 作为备用
 --     （方向键、F 键带 Ctrl+Shift 不受影响，如 Ctrl+Shift+↑、Ctrl+Shift+F12 照常可用）
---   * 双击 Shift、Ctrl+Tab、Ctrl+I（终端里等同 Tab）无法实现
+--   * 双击 Shift（用 Ctrl+Shift+Space 到处搜索代替）、Ctrl+Tab、Ctrl+I（终端里等同 Tab）无法实现
 --   * 浏览器会抢走 Ctrl+N / Ctrl+W / Ctrl+T，这几个只能在 Windows Terminal 里用；Ctrl+N 在浏览器里可用 Alt+N
---   * Ctrl+B 是 tmux 前缀键，编辑器里跳转到声明要连按两次 Ctrl+B（或 Ctrl+点击）
+--   * Ctrl+B 在 nvim 面板里由 tmux 直接交给 nvim（见 tmux.conf），其他面板里仍是 tmux 前缀；nvim 面板里的 tmux 操作用第二前缀 Ctrl+Space
 --
 -- 被替换掉的 Vim 原有按键：
 --   翻页 Ctrl+D/U/F/B → PageDown/PageUp 或鼠标滚轮；重做 Ctrl+R → Alt+Shift+Z；
@@ -228,7 +228,7 @@ local function definition()
     pcall(vim.cmd, "normal! gd") -- 光标不在标识符上（如点到空白处）时不报错
   end
 end
-map(NI, "<C-b>", n(definition), "跳转到声明（tmux 里连按两次 Ctrl+B）")
+map(NI, "<C-b>", n(definition), "跳转到声明")
 map(NI, "<C-M-b>", n(function() Snacks.picker.lsp_implementations() end), "跳转到实现")
 map(NI, "<M-B>", n(function() Snacks.picker.lsp_type_definitions() end), "跳转到类型声明（IDEA: Ctrl+Shift+B）")
 map(NI, "<C-u>", n(function()

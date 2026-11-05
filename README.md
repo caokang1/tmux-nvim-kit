@@ -32,6 +32,8 @@ IDEA 打开大型 Java 项目又慢又吃内存，只是想**看代码、跳转�
 | 各类文件 | XML/pom、YAML、properties、JSON、SQL、Shell、Dockerfile、前端、Python、Markdown（直接渲染）等 |
 | 浏览器 | 内嵌 Nerd Font，任何设备打开图标都正常；带登录密码；复制内容进入当前设备剪贴板 |
 | 链接 | Claude Code 等程序里的链接自动用 Windows 浏览器打开；`前缀 u` 列出面板里的链接 |
+| 逆向 IDEA | 左侧实现/重写图标、用法/层级树形面板、书签、到处搜索、Spring 接口地址搜索、MyBatis Mapper↔XML、配置项↔`@Value`、import 折叠、properties 中文显示、复制引用、Git 注释 |
+| 配合 Claude Code | `前缀 j` 把 Claude 输出 / 日志里的 `文件:行号`、Java 堆栈在 nvim 打开；`空格 a s` 把选中代码发给 Claude |
 
 ## 快速开始
 
@@ -141,17 +143,20 @@ nvim .                           # 打开
   - Windows Terminal 里需要运行一次 `powershell -ExecutionPolicy Bypass -File windows\wt-keys.ps1`（不需要管理员，会先备份设置）
   - 例外：`Ctrl+Shift+V` / `Ctrl+Shift+C` 仍是终端的粘贴 / 复制；浏览器里 `Ctrl+Shift+N` / `T` / `W` 被浏览器占用
   - 以上不可用时，对应的 `Alt+Shift+字母` 功能完全相同，作为备用
-- **`Ctrl+B` 是 tmux 前缀**：跳转到声明要连按两次 `Ctrl+B`，或按住 `Ctrl` / `Alt` 鼠标点击
+- **`Ctrl+B` 单按即跳转**：nvim 所在的面板里 tmux 把 `Ctrl+B` 直接交给 nvim；这时 tmux 操作用第二前缀 `Ctrl+Space`（其他面板里 `Ctrl+B` 仍是 tmux 前缀）
 - **浏览器会抢走 `Ctrl+N`、`Ctrl+W`、`Ctrl+T`、`Ctrl+Tab`**（新窗口、关标签页等）：只能在 Windows Terminal 里用，`Ctrl+N` 在浏览器里用 `Alt+N` 代替。千万别在浏览器里按 `Ctrl+W`，会关掉网页
-- **无法实现**：双击 Shift（用 `Alt+Shift+N` 找文件）、`Ctrl+I`（终端里等同 Tab）、`Ctrl+Alt+M`（等同 `Alt+Enter`，选中代码后 `Alt+Enter` 菜单里有提取方法）
+- **无法实现**：双击 Shift（用 `Ctrl+Shift+Space` 或 `空格 s e` 到处搜索代替）、`Ctrl+I`（终端里等同 Tab）、`Ctrl+Alt+M`（等同 `Alt+Enter`，选中代码后 `Alt+Enter` 菜单里有提取方法）
 - **Windows Terminal 默认把 `Alt+Enter` 当作全屏切换**，上面的 `wt-keys.ps1` 会一并去掉这个设置
+- **终端自己的键不占用**：`F11` 全屏、`Ctrl+-`/`Ctrl+=` 缩放保留给终端，所以书签用 `Alt+F11`、折叠用 `Alt+-`/`Alt+=`
 
 | 分类 | 快捷键 |
 |---|---|
 | 编辑 | `Ctrl+S` 保存、`Ctrl+Z` 撤销、`Alt+Shift+Z` 重做、`Ctrl+C`/`X`/`V` 复制/剪切/粘贴（不选中时整行）、`Ctrl+D` 复制行、`Ctrl+Y` 删除行、`Ctrl+/` 注释、`Ctrl+A` 全选、`Ctrl+W` 扩大选区、`Shift+方向键` 选择、`Alt+Shift+↑/↓` 移动行、`Alt+Shift+J` 合并行、`Alt+Shift+U` 大小写 |
 | 代码 | `Alt+Enter` 意图操作、`Alt+Insert` 生成、`Ctrl+O` 重写方法、`Shift+F6` 重命名、`Ctrl+Alt+V`/`C` 提取变量/常量、`Ctrl+Alt+N` 内联、`Ctrl+Alt+L` 格式化、`Ctrl+Alt+O` 整理 import、`Ctrl+Alt+I` 自动缩进 |
-| 跳转 | `Ctrl+B` 声明、`Ctrl+Alt+B` 实现、`Alt+Shift+B` 类型声明、`Ctrl+U` 父类方法、`Alt+F7` 查找用法、`Ctrl+H` 类型层级、`Ctrl+Alt+H` 调用层级、`Ctrl+Alt+←/→` 后退/前进、`Alt+↑/↓` 上/下一个方法、`F2`/`Shift+F2` 下/上一个问题、`Ctrl+G` 跳转到行 |
-| 查找 | `Ctrl+N` 类、`Alt+Shift+N` 文件、`Alt+Shift+A` 操作、`Ctrl+E` 最近文件、`Alt+Shift+E` 最近位置、`Ctrl+F12` 文件结构、`Ctrl+F`/`Ctrl+R` 文件内查找/替换、`F3`/`Shift+F3` 下/上一个、`Alt+Shift+F`/`Alt+Shift+R` 全局查找/替换、`Alt+Shift+V` 复制历史 |
+| 跳转 | `Ctrl+B` 声明（在声明处按显示用法）、`Ctrl+Alt+B` 实现、`Alt+Shift+B` 类型声明、`Ctrl+U` 父类方法、`Alt+F7` 查找用法面板（`Ctrl+Alt+F7` 弹框，`Ctrl+Alt+↓/↑` 下/上一个用法）、`Ctrl+H` 类型层级、`Ctrl+Alt+H` 调用层级、`Ctrl+Alt+←/→` 后退/前进、`Alt+↑/↓` 上/下一个方法、`F2`/`Shift+F2` 下/上一个问题、`Ctrl+G` 跳转到行 |
+| 查找 | `Ctrl+Shift+Space`（或 `空格 s e`）到处搜索、`Ctrl+N` 类（再按一次含依赖库）、`Alt+Shift+N` 文件、`Alt+Shift+A` 操作、`Ctrl+E` 最近文件、`Alt+Shift+E` 最近位置、`Ctrl+F12` 文件结构、`Ctrl+F`/`Ctrl+R` 文件内查找/替换、`F3`/`Shift+F3` 下/上一个、`Alt+Shift+F`/`Alt+Shift+R` 全局查找/替换、`Alt+Shift+V` 复制历史 |
+| 书签 / 折叠 | `Alt+F11` 书签、`Ctrl+F11` 助记符书签、`空格 m 字符` 跳到助记符书签、`Alt+Shift+F11` 书签列表、`Alt+-`/`Alt+=` 折叠/展开、`Alt+Shift+-`/`Alt+Shift+=` 全部折叠/展开 |
+| Java / Spring | `Ctrl+\` 按接口地址找 Controller（或 `空格 s U`）、`Ctrl+B` Mapper ↔ XML 互跳、`Ctrl+B` 配置项 ↔ `@Value` 互跳、点击左侧 `↓`/`↑` 实现/父类方法、`Ctrl+Alt+Shift+C`（或 `空格 c y`）复制引用、`Alt+Shift+G` Git 注释 |
 | 文档 | `Ctrl+Q` 文档、`Ctrl+P` 参数信息、`Alt+Shift+I` 快速查看定义 |
 | 窗口 | `Alt+←/→` 切换标签页、`Ctrl+F4` 关闭标签页、`Alt+1` 文件树、`Alt+F1` 定位当前文件、`Alt+6` 问题、`Alt+7` 结构、`Alt+9` / `Ctrl+K` Git、`Alt+F12` 终端、`Ctrl+Shift+F12` 最大化编辑区 |
 
@@ -173,9 +178,20 @@ nvim .                           # 打开
 
 **文件树**：`Enter`/`→` 打开或展开、`←` 折叠、直接打字过滤、`a`/`d`/`r` 新建/删除/重命名、`?` 查看全部按键。
 
-**Markdown**：直接显示渲染后的效果；按 `i` 编辑时显示源码，`空格 u m` 切换。
+**Markdown**：直接显示渲染后的效果；按 `i` 编辑时显示源码，`空格 u m` 切换。回车 / `Ctrl+B` / `Ctrl+点击` 打开链接（相对路径文件、`#锚点`、网址），`Ctrl+F12` 标题大纲。
 
-### tmux：前缀键 `Ctrl+b`（先按 Ctrl+b，松开，再按后面的键）
+**像 IDEA 一样看 Java 代码**（这些都不需要额外操作）：
+- 打开 Java 文件时 import 自动折叠；方法、类旁边显示 `↓`（有实现/子类）、`↑`（实现接口 / 重写父类），点击跳转，`空格 u O` 开关
+- 文件树把只有一层子目录的包合并显示（`com/example/demo`），`空格 u P` 开关
+- 跳进依赖库的类时标签页显示类名（`ArrayList.class`），状态栏显示所在 jar
+- `*.properties` 里的 `\u7528\u6237` 直接显示成中文（文件内容不变）
+- `Ctrl+F12` 文件结构里再按一次 `Ctrl+F12` 显示继承来的成员
+- `Ctrl+Shift+F` 全局搜索里 `Alt+S` 切换范围（整个项目 / 当前模块 / 当前目录 / 自选目录）、`Alt+T` 排除测试代码
+- 查找用法、类型层级、调用层级在底部树形面板里显示，`→`/`←` 展开折叠、回车跳转、`Alt+S` 切换方向
+
+### tmux：前缀键 `Ctrl+b` 或 `Ctrl+Space`（先按前缀，松开，再按后面的键）
+
+nvim 所在的面板里 `Ctrl+b` 交给 nvim（跳转到声明），这时用 `Ctrl+Space` 作前缀；其他面板（shell、Claude Code）里两个都可以。
 
 **记不住就按 `前缀 ?`**：弹出中文速查表（下表的按键 + 常用命令），按 `q` 或 `Esc` 关闭。tmux 原来的英文全部按键列表改到了 `前缀 Alt+?`。
 
@@ -191,6 +207,7 @@ nvim .                           # 打开
 | 关闭当前分屏 / 窗口 | `前缀 x` / `前缀 &`，然后按 `y` 确认 |
 | 重新加载配置 | `前缀 r` |
 | 打开面板里的链接 | `前缀 u`（列出最近的链接，选中后在 Windows 浏览器打开） |
+| 在 nvim 里打开 文件:行号 / 堆栈 | `前缀 j`（列出同窗口其他面板里的 `文件:行号`、Java 堆栈，选中后在 nvim 里打开） |
 
 进入 / 切换会话用 `t` 命令，代替 `tmux new -A -s 名字` 和 `tmux attach -t 名字`，tmux 里外都能用：
 
@@ -238,7 +255,9 @@ curl -fsSL https://claude.ai/install.sh | bash
 ```
 
 - 在 tmux 里 `Shift+Enter` 换行已配置好（Windows Terminal 中有效；浏览器里用 `\` + Enter）
-- Claude Code 的 `Ctrl+b`（转后台）会被 tmux 截走，要**连按两次 `Ctrl+b`**
+- Claude Code 的 `Ctrl+b`（转后台）会被 tmux 截走，要**连按两次 `Ctrl+b`**（nvim 面板里单按 `Ctrl+b` 就是跳转到声明，不受影响）
+- **Claude 提到的代码一键打开**：Claude 输出里的 `文件:行号`、Java 异常堆栈，按 `前缀 j` 选择后在左边 nvim 打开并定位到行；nvim 里 `空格 j s` 可以粘贴一段堆栈 / 日志解析成跳转列表
+- **把代码发给 Claude**：nvim 里选中代码按 `空格 a s`，以 `@文件#L起-止` 加代码的形式贴到同窗口的 Claude 输入框（不会自动发送，可以接着写问题）
 - 推荐布局：`前缀 %` 分屏，左边 nvim 看代码，右边 `claude`
 - 离开电脑时想知道 Claude 什么时候跑完：配合 [claude-code-wecom-notify](https://github.com/caokang1/claude-code-wecom-notify)，回答完成后推送提醒到企业微信 / 飞书
 - 打开 Claude 给出的链接（在线文档等）：Claude 会自动用 Windows 默认浏览器打开（安装时已设置 `BROWSER=win-open`，旧终端需重新打开）；手动打开用 `前缀 u` 选择，或在 Windows Terminal 里按住 `Ctrl+Shift` 单击链接
@@ -334,10 +353,20 @@ config/nvim/          Neovim 配置（LazyVim），lazy-lock.json 锁定插件�
   lua/config/idea_keys.lua   IDEA 快捷键（Windows 默认键位）
   lua/config/find_bar.lua    Ctrl+F 查找栏
   lua/config/zh*.lua         中文按键提示、F1 帮助面板
+  lua/config/kit/            逆向 IDEA 的功能，一个功能一个文件：
+    gutter / decl_usages       左侧实现/重写图标、在声明处 Ctrl+B 显示用法
+    usages / hierarchy / tree  查找用法、类型层级、调用层级树形面板
+    spring / mybatis / config_keys  接口地址搜索、Mapper↔XML、配置项↔@Value
+    bookmarks / everywhere / libfiles  书签、到处搜索、依赖库文件显示
+    java_view / markdown_view / properties_view  import 折叠与结构、Markdown 链接、properties 中文
+    copy_ref / find_scope / git_annotate / explorer_compact  复制引用、搜索范围、Git 注释、压缩空包
+    tmux_bridge                与 tmux / Claude Code 配合（前缀 j、空格 a s、空格 j s）
 config/tmux.conf      tmux 配置
 bin/win-open          用 Windows 默认浏览器打开链接（BROWSER 变量指向它）
 bin/tmux-open-url     tmux 前缀 u：列出面板里的链接并打开
 bin/tmux-help         tmux 前缀 ?：中文速查表
+bin/tmux-jump         tmux 前缀 j：在 nvim 里打开其他面板中的 文件:行号 / Java 堆栈
+test/                 无界面自动测试（test/run.sh）和示例 Spring Boot + MyBatis 项目
 bin/t                 进入 / 切换 tmux 会话
 web/                  浏览器访问（ttyd）：启动脚本、systemd 服务、管理命令、嵌入字体的网页生成
 ```

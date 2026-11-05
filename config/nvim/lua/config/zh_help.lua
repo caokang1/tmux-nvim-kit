@@ -15,21 +15,27 @@ local basic = {
   { "Alt+Shift+↑ / ↓", "整行上移 / 下移" },
   { "Ctrl+Alt+L / Ctrl+Alt+O", "格式化 / 整理 import" },
   { "Ctrl+F / Ctrl+R", "在文件中查找 / 替换（F3、Shift+F3 下一个 / 上一个）" },
-  { "Ctrl+Shift+F / Ctrl+Shift+R", "在所有文件中查找 / 替换（Alt+C/W/X 大小写/整词/正则）" },
+  { "Ctrl+Shift+F / Ctrl+Shift+R", "在所有文件中查找 / 替换（Alt+C/W/X 大小写/整词/正则，Alt+S 范围：项目/模块/目录，Alt+T 排除测试）" },
+  { "Alt+- / Alt+=", "折叠 / 展开当前块（Alt+Shift+- / Alt+Shift+= 全部折叠 / 展开）" },
   { ":q! / :qa!", "不保存关闭 / 全部不保存退出" },
 }
 
 local files = {
   { "导航（和 IDEA 相同）" },
-  { "Ctrl+B Ctrl+B / Ctrl+点击", "跳转到声明（Ctrl+B 是 tmux 前缀，要连按两次）" },
+  { "Ctrl+B / Ctrl+点击", "跳转到声明；在声明处按显示用法（nvim 里单按即可，tmux 操作改用 Ctrl+Space 前缀）" },
+  { "Ctrl+Shift+Space / 空格 s e", "到处搜索（IDEA 双击 Shift）：Tab 切换 全部/类/文件/符号/操作" },
   { "Ctrl+Alt+← / →", "后退 / 前进" },
   { "Ctrl+Shift+N", "查找文件（浏览器里用 Alt+Shift+N）" },
-  { "Ctrl+N / Alt+N", "查找类和方法（浏览器里用 Alt+N）" },
+  { "Ctrl+N / Alt+N", "查找类（再按一次包含依赖库；浏览器里用 Alt+N）" },
   { "Ctrl+E / Ctrl+Shift+E", "最近的文件 / 最近的位置" },
   { "Ctrl+G", "跳转到行" },
+  { "Alt+F11 / Ctrl+F11", "切换书签 / 带助记符的书签（空格 m 字符 跳到该书签）" },
+  { "Alt+Shift+F11 / 空格 m m", "书签列表（Ctrl+D 删除，Ctrl+R 写描述）" },
+  { "Ctrl+Alt+Shift+C / 空格 c y", "复制引用：路径:行号 / 全限定名#方法" },
   { "Alt+← / → / Ctrl+F4", "切换标签页 / 关闭标签页" },
   { "Alt+1 / Alt+F1", "文件树 / 在文件树中定位当前文件" },
   { "Alt+6 / Alt+7 / Alt+9", "问题 / 结构 / Git 面板" },
+  { "Alt+Shift+G", "Git 注释：逐行显示作者和日期（回车看该提交，再按关闭）" },
   { "Alt+F12", "终端" },
   { "Ctrl+Shift+A", "查找操作（所有快捷键）" },
 }
@@ -42,16 +48,38 @@ local code = {
   { "Ctrl+Alt+V / Ctrl+Alt+C", "提取变量 / 常量" },
   { "Ctrl+Alt+B / Alt+Shift+B", "跳转到实现 / 类型声明" },
   { "Ctrl+U", "跳转到父类方法" },
-  { "Alt+F7", "查找用法" },
-  { "Ctrl+H / Ctrl+Alt+H", "类型层级 / 调用层级" },
+  { "Alt+F7 / Ctrl+Alt+F7", "查找用法（底部面板 / 弹框）；Ctrl+Alt+↓ / ↑ 下一个 / 上一个用法" },
+  { "Ctrl+H / Ctrl+Alt+H", "类型层级 / 调用层级（面板里 Alt+S 切换方向）" },
+  { "点击左侧 ↓ / ↑", "列出实现 / 跳到父类方法（空格 u O 开关图标）" },
   { "Ctrl+Q / Ctrl+P", "查看文档 / 参数信息" },
-  { "Ctrl+F12", "文件结构" },
+  { "Ctrl+F12", "文件结构（再按一次显示继承的成员）" },
   { "Alt+↑ / ↓", "上一个 / 下一个方法" },
   { "F2 / Shift+F2", "下一个 / 上一个问题" },
 }
 
+local spring = {
+  { "Spring / MyBatis / 与 Claude 配合" },
+  { "Ctrl+\\ / 空格 s U", "按接口地址查找 Controller 方法（输入 /api/user 等）" },
+  { "Ctrl+B（Mapper / XML）", "Mapper 接口方法 ↔ XML 语句互跳，resultMap / include 跳到定义" },
+  { "Ctrl+B（yml / @Value）", "配置项 ↔ @Value / @ConfigurationProperties 互跳" },
+  { "空格 a s", "把选中代码（或当前行位置）发给同窗口的 Claude Code" },
+  { "空格 j s", "粘贴堆栈 / 日志，解析成可跳转的列表" },
+  { "tmux 前缀 j", "在 nvim 里打开其他面板（Claude、日志）里的 文件:行号 / 堆栈" },
+}
+
+local tree = {
+  { "用法 / 层级面板" },
+  { "回车", "跳转到代码（面板保留）" },
+  { "→ / ← (l / h)", "展开 / 折叠" },
+  { "Alt+S", "切换方向（父类型/子类型，调用方/被调用）" },
+  { "p", "移动光标时自动预览 开 / 关" },
+  { "q / Esc", "关闭面板" },
+}
+
 local markdown = {
   { "Markdown" },
+  { "回车 / Ctrl+B / Ctrl+点击", "打开链接（文件、#锚点、网址）" },
+  { "Ctrl+F12 / Alt+7", "标题大纲" },
   { "空格 u m", "切换渲染效果 / 源码" },
   { "]] / [[", "下一个 / 上一个标题" },
   { "gO", "文件大纲" },
@@ -105,6 +133,9 @@ local function context(buf)
     end
     return "搜索窗口", { picker }
   end
+  if ft == "kit_tree" then
+    return "用法 / 层级面板", { tree, code }
+  end
   if bt == "terminal" then
     return "终端", { terminal, files }
   end
@@ -112,7 +143,7 @@ local function context(buf)
     return "Markdown 文件", { markdown, basic, files }
   end
   if #vim.lsp.get_clients({ bufnr = buf }) > 0 or ft == "java" then
-    return (ft ~= "" and ft or "代码") .. " 文件", { code, basic, files }
+    return (ft ~= "" and ft or "代码") .. " 文件", { code, spring, basic, files }
   end
   return "编辑器", { basic, files, code }
 end
