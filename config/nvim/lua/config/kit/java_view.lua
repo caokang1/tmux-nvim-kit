@@ -64,7 +64,11 @@ function M.foldtext()
   if not ok then chunks = { { first:gsub("\t", (" "):rep(vim.bo[buf].tabstop)), "Normal" } } end
   local last = vim.trim(vim.fn.getline(e))
   chunks[#chunks + 1] = { " ⋯ ", "Comment" }
-  if last:match("^[%)%]}]") then chunks[#chunks + 1] = { last, "Normal" } end
+  if last:match("^[%)%]}]") then
+    chunks[#chunks + 1] = { last, "Normal" }
+  elseif last:match("^%*/") then
+    chunks[#chunks + 1] = { "*/", "Comment" }
+  end
   return chunks
 end
 
@@ -251,6 +255,19 @@ local function members_of(symbols, name)
   return out
 end
 
+-- 父类里的 private 成员子类看不到，不算继承（IDEA 也不显示）。documentSymbol 不带修饰符，
+-- 项目里的源码文件直接看声明那几行；依赖库（jdt://）里的类读不到文本，不过滤
+function M.is_private(uri, sym)
+  if not uri:match("^file:") then return false end
+  local ok, lines = pcall(vim.fn.readfile, vim.uri_to_fname(uri))
+  if not ok then return false end
+  local first = sym.range and sym.range.start.line or 0
+  local last = (sym.selectionRange or sym.range).start.line
+  local text = table.concat(vim.list_slice(lines, first + 1, last + 1), " ")
+  local before = text:match("^(.-)" .. vim.pesc(sym.name:gsub("%(.*$", ""))) or text
+  return before:find("%f[%w]private%f[%W]") ~= nil
+end
+
 ---异步取当前类继承来的成员：jdtls 类型层级取所有父类型 / 接口（逐层向上），再取各自的 documentSymbol
 ---（依赖库里的父类用 jdt:// 地址，jdtls 能直接返回）。结果按"近的父类在前"排列：
 ---cb({ { from = 父类型名, uri = 文件地址, symbol = DocumentSymbol }, ... })，出错时 cb(nil, 原因)
@@ -290,7 +307,7 @@ function M.collect_inherited(buf, cb)
               local name = s.name:gsub("<.*$", "")
               groups[idx] = vim.tbl_map(function(sym)
                 return { from = name, uri = s.uri, symbol = sym }
-              end, members_of(syms, name))
+              end, vim.tbl_filter(function(sym) return not M.is_private(s.uri, sym) end, members_of(syms, name)))
               pending = pending - 1
               finish()
             end, buf)
@@ -310,7 +327,7 @@ local function structure_title(on)
 end
 
 -- 把继承的成员转成 picker 的条目，挂在当前类下面
-local function inherited_items(members, parent, client, want)
+local function inherited_items(members, parent, client, want, own)
   local items = {}
   for _, m in ipairs(members) do
     local s = m.symbol
@@ -321,6 +338,8 @@ local function inherited_items(members, parent, client, want)
         kind = kind, name = s.name, detail = s.detail, parent = parent, tree = true,
         text = kind .. " " .. s.name .. " " .. m.from,
         inherited_from = m.from, item = s,
+        -- 本类里有同名同参数的成员：父类的这个已被重写 / 隐藏
+        overridden = own and own[s.name] or nil,
         pos = { range.start.line + 1, range.start.character },
         end_pos = { range["end"].line + 1, range["end"].character },
         loc = { uri = m.uri, range = range, encoding = client and client.offset_encoding or "utf-16" },
@@ -355,9 +374,13 @@ function M.structure()
       if not opts.inherited or type(base) ~= "function" then return base end
       return function(cb)
         local cls, last ---@type table?, table?
+        local own = {} -- 本类成员名（含参数），用来标出被重写的父类方法
         base(function(item)
           if not cls and item.parent and item.parent.root and TYPE_KINDS[item.kind] then cls = item end
-          if cls and item.parent == cls then last = item end
+          if cls and item.parent == cls then
+            last = item
+            own[item.name] = true
+          end
           cb(item)
         end)
         -- 取数据和组装条目都在主循环里做（协程里不能调用大部分 nvim API）
@@ -370,7 +393,7 @@ function M.structure()
             if filter == nil then filter = opts.filter.default end
             local function want(kind) return type(filter) == "boolean" or vim.tbl_contains(filter, kind) end
             local client = vim.lsp.get_clients({ bufnr = buf, name = "jdtls" })[1]
-            items = inherited_items(res or {}, cls or { root = true, text = "" }, client, want)
+            items = inherited_items(res or {}, cls or { root = true, text = "" }, client, want, own)
             local bufmap = lsp.bufmap()
             for _, item in ipairs(items) do item.buf = item.buf or bufmap[item.file] end
             done = true
@@ -395,7 +418,7 @@ function M.structure()
             r[2] = "Comment"
           end
         end
-        ret[#ret + 1] = { "  ← " .. item.inherited_from, "Comment" }
+        ret[#ret + 1] = { "  ← " .. item.inherited_from .. (item.overridden and "（已重写）" or ""), "Comment" }
       end
       return ret
     end,

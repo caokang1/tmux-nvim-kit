@@ -113,7 +113,10 @@ return {
     for _, it in ipairs(picker:items()) do
       local ret = picker.format(it, picker)
       if it.inherited_from then
-        t.eq(ret[#ret][1], "  ← " .. it.inherited_from)
+        t.ok(ret[#ret][1]:find("← " .. it.inherited_from, 1, true), "没有来源类名")
+        if it.inherited_from == "AbstractService" and it.name:find("^audit") then
+          t.ok(ret[#ret][1]:find("已重写"), "被重写的 audit 没有标出：" .. ret[#ret][1])
+        end
       end
     end
     -- 选中继承成员能跳到父类文件
@@ -167,5 +170,32 @@ return {
     t.ok(vim.wo.foldexpr ~= "v:lua.vim.treesitter.foldexpr()", "foldexpr 没有还原：" .. vim.wo.foldexpr)
     t.open(IMPL)
     t.eq(vim.wo.foldexpr, "v:lua.vim.treesitter.foldexpr()")
+  end,
+
+  ["7 javadoc 可折叠，父类 private 成员不算继承"] = function(t)
+    local dir = vim.fn.tempname()
+    vim.fn.mkdir(dir, "p")
+    local f = dir .. "/Base.java"
+    vim.fn.writefile({
+      "package x;", "", "/**", " * 说明", " */", "public class Base {",
+      "    private int secret;", "    protected void hook() {", "    }", "    private",
+      "    void hidden() {", "    }", "}",
+    }, f)
+    vim.cmd("edit " .. vim.fn.fnameescape(f))
+    t.wait(3000, function() return vim.fn.foldlevel(3) > 0 end, "javadoc 没有折叠范围")
+    t.eq(vim.fn.foldclosed(3), -1, "javadoc 默认不该折叠")
+    vim.cmd("3foldclose")
+    t.eq(vim.fn.foldclosed(3), 3)
+    vim.v.foldstart, vim.v.foldend = 3, 5
+    local text = table.concat(vim.tbl_map(function(c) return c[1] end, jv().foldtext()))
+    t.eq(text, "/** ⋯ */")
+    local uri = vim.uri_from_fname(f)
+    local function sym(name, l1, l2)
+      return { name = name, range = { start = { line = l1 } }, selectionRange = { start = { line = l2 } } }
+    end
+    t.eq(jv().is_private(uri, sym("secret", 6, 6)), true)
+    t.eq(jv().is_private(uri, sym("hook()", 7, 7)), false)
+    t.eq(jv().is_private(uri, sym("hidden()", 9, 10)), true)
+    t.eq(jv().is_private("jdt://x", sym("a", 0, 0)), false)
   end,
 }
