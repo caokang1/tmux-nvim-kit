@@ -117,7 +117,7 @@ end
 
 ---在 win 里折叠 import 块；折叠还没计算好时稍后重试（treesitter 解析是异步更新折叠的）
 function M.fold_imports(win, tries)
-  tries = tries or 20
+  tries = tries or 100
   if not vim.api.nvim_win_is_valid(win) then return end
   local buf = vim.api.nvim_win_get_buf(win)
   if vim.bo[buf].filetype ~= "java" then return end
@@ -129,7 +129,7 @@ function M.fold_imports(win, tries)
     if vim.fn.foldclosed(s) ~= -1 then return end
     if vim.fn.foldlevel(s) > 0 then pcall(vim.cmd, s .. "foldclose") end
     if vim.fn.foldclosed(s) == -1 and tries > 0 then
-      vim.defer_fn(function() M.fold_imports(win, tries - 1) end, 50)
+      vim.defer_fn(function() M.fold_imports(win, tries - 1) end, 10)
     end
   end)
 end
@@ -257,10 +257,16 @@ end
 
 -- 父类里的 private 成员子类看不到，不算继承（IDEA 也不显示）。documentSymbol 不带修饰符，
 -- 项目里的源码文件直接看声明那几行；依赖库（jdt://）里的类读不到文本，不过滤
-function M.is_private(uri, sym)
+---@param files? table<string, string[]|false> 已读过的文件（同一次查询里一个父类只读一次）
+function M.is_private(uri, sym, files)
   if not uri:match("^file:") then return false end
-  local ok, lines = pcall(vim.fn.readfile, vim.uri_to_fname(uri))
-  if not ok then return false end
+  files = files or {}
+  if files[uri] == nil then
+    local ok, l = pcall(vim.fn.readfile, vim.uri_to_fname(uri))
+    files[uri] = ok and l or false
+  end
+  local lines = files[uri]
+  if not lines then return false end
   local first = sym.range and sym.range.start.line or 0
   local last = (sym.selectionRange or sym.range).start.line
   local text = table.concat(vim.list_slice(lines, first + 1, last + 1), " ")
@@ -283,6 +289,7 @@ function M.collect_inherited(buf, cb)
   client:request("textDocument/prepareTypeHierarchy", params, function(err, res)
     if err or not res or not res[1] then return cb(nil, err and err.message or "取不到类型层级") end
     local groups, seen, pending, order, finished = {}, {}, 0, 0, false
+    local files = {}
     local function finish()
       if pending > 0 or finished then return end
       finished = true
@@ -307,7 +314,7 @@ function M.collect_inherited(buf, cb)
               local name = s.name:gsub("<.*$", "")
               groups[idx] = vim.tbl_map(function(sym)
                 return { from = name, uri = s.uri, symbol = sym }
-              end, vim.tbl_filter(function(sym) return not M.is_private(s.uri, sym) end, members_of(syms, name)))
+              end, vim.tbl_filter(function(sym) return not M.is_private(s.uri, sym, files) end, members_of(syms, name)))
               pending = pending - 1
               finish()
             end, buf)

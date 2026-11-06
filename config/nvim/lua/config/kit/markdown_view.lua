@@ -111,12 +111,13 @@ function M.find_anchor(buf, anchor)
   local line = anchor:match("^L(%d+)")
   if line then return tonumber(line) end
   local want = anchor:lower()
-  for _, h in ipairs(M.headings(buf)) do
+  local hs = M.headings(buf)
+  for _, h in ipairs(hs) do
     if h.anchor == want then return h.lnum end
   end
   -- 写链接的人可能没去标点、带了大写，再按同样规则算一遍比较
   local s = M.slug(anchor)
-  for _, h in ipairs(M.headings(buf)) do
+  for _, h in ipairs(hs) do
     if h.anchor == s then return h.lnum end
   end
 end
