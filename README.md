@@ -9,6 +9,8 @@
 ![语言](https://img.shields.io/badge/文档-中文-red)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
+📖 **[在线使用指南](https://caokang1.github.io/tmux-nvim-kit/guide.html)**：按"想做什么 → 按什么"整理的快捷键速查，适合第一次上手时对照着用。
+
 ## 为什么用它
 
 IDEA 打开大型 Java 项目又慢又吃内存，只是想**看代码、跳转、搜索**时显得太重。这套工具把 Neovim 调教成 IDEA 的样子和手感：
@@ -63,6 +65,7 @@ cd ~/project && nvim .
 - [一、安装](#一安装)
 - [二、日常使用](#二日常使用)
   - [按场景速查：想做什么 → 按什么](#按场景速查)
+  - [在线使用指南（网页版）](https://caokang1.github.io/tmux-nvim-kit/guide.html)
 - [三、常见问题](#三常见问题)
 - [四、卸载](#四卸载)
 - [目录说明](#目录说明)
@@ -192,7 +195,7 @@ nvim .                           # 打开
 
 ### 按场景速查
 
-按"想做什么 → 按什么"整理，第一次用可以从这里看起。多个结果时会弹出列表加大预览：`↑`/`↓` 选择，回车跳转，`Esc` 关闭。
+按"想做什么 → 按什么"整理，第一次用可以从这里看起。同样内容的网页版：[在线使用指南](https://caokang1.github.io/tmux-nvim-kit/guide.html)。多个结果时会弹出列表加大预览：`↑`/`↓` 选择，回车跳转，`Esc` 关闭。
 
 **先知道这一点：tmux 前缀按面板区分**
 

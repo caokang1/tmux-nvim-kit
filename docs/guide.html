@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>tmux-nvim-kit 使用指南</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* 布局：单栏阅读，顶部固定章节导航；每节是"想做什么 → 按什么"的对照表 */
+:root {
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --fg: #1d2330;
+  --muted: #5c6578;
+  --line: #dde1ea;
+  --accent: #3a5ccc;
+  --accent-soft: #e6ecfb;
+  --key-bg: #eef0f5;
+  --key-edge: #c7ccd8;
+  --note: #8a5a00;
+  --note-bg: #fff6e0;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191f; --surface: #1f222a; --fg: #dfe3ec; --muted: #9aa3b5; --line: #30343f;
+    --accent: #8aa6ff; --accent-soft: #252e48; --key-bg: #2a2e39; --key-edge: #434959;
+    --note: #f0c36a; --note-bg: #2e2818; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17191f; --surface: #1f222a; --fg: #dfe3ec; --muted: #9aa3b5; --line: #30343f;
+  --accent: #8aa6ff; --accent-soft: #252e48; --key-bg: #2a2e39; --key-edge: #434959;
+  --note: #f0c36a; --note-bg: #2e2818; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--f-body);
+  font-size: 15px; line-height: 1.7;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap {
+  max-width: 920px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header { padding-block: 40px 24px; }
+header h1 { font-size: 30px; line-height: 1.3; margin: 0 0 8px; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 62ch; }
+nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+nav .wrap { display: flex; gap: 4px; overflow-x: auto; padding-block: 8px; scrollbar-width: none; }
+nav a {
+  flex: none; color: var(--muted); text-decoration: none; font-size: 14px;
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+}
+nav a:hover, nav a:focus-visible { color: var(--accent); background: var(--accent-soft); outline: none; }
+main { padding-block: 24px 64px; display: grid; gap: 40px; }
+section { scroll-margin-top: 64px; min-width: 0; }
+h2 { font-size: 21px; margin: 0 0 4px; display: flex; align-items: baseline; gap: 10px; text-wrap: balance; }
+h2 .tag { font-size: 12px; font-weight: 500; color: var(--accent); letter-spacing: .04em; }
+.lead { color: var(--muted); margin: 0 0 14px; max-width: 68ch; }
+.steps { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.step b { display: block; margin-bottom: 4px; }
+.step p { margin: 0; color: var(--muted); font-size: 14px; }
+pre {
+  font-family: var(--f-mono); font-size: 13px; background: var(--key-bg); border-radius: 8px;
+  padding: 12px 14px; margin: 10px 0 0; overflow-x: auto; line-height: 1.6;
+}
+.tbl { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 520px; }
+th, td { text-align: left; padding: 10px 14px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .06em; background: var(--bg); }
+td:first-child { width: 40%; }
+td .sub { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+kbd {
+  font-family: var(--f-mono); font-size: 12.5px; white-space: nowrap;
+  background: var(--key-bg); border: 1px solid var(--key-edge); border-bottom-width: 2px;
+  border-radius: 5px; padding: 1px 6px; color: var(--fg);
+}
+.or { color: var(--muted); font-size: 13px; margin: 0 4px; }
+.note {
+  background: var(--note-bg); color: var(--fg); border-radius: 8px; padding: 10px 14px;
+  margin-top: 12px; font-size: 14px;
+}
+.note strong { color: var(--note); }
+code { font-family: var(--f-mono); font-size: 13px; background: var(--key-bg); border-radius: 4px; padding: 0 4px; }
+footer a { color: var(--accent); }
+footer { color: var(--muted); font-size: 13px; padding-block: 0 48px; }
+@media (max-width: 520px) { header h1 { font-size: 24px; } }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1>tmux-nvim-kit 使用指南</h1>
+  <p>按 IDEA 的习惯看 Java 项目：跳转、查用法、Spring 接口、MyBatis、配合 Claude Code。下面按"想做什么 → 按什么"列出，按键都是 Windows 版 IDEA 的默认键位。</p>
+</header>
+
+<nav aria-label="章节">
+  <div class="wrap">
+    <a href="#start">开始</a>
+    <a href="#prefix">tmux 前缀</a>
+    <a href="#goto">跳转</a>
+    <a href="#search">搜索</a>
+    <a href="#spring">Spring / MyBatis</a>
+    <a href="#read">看代码</a>
+    <a href="#bookmark">书签</a>
+    <a href="#markdown">Markdown</a>
+    <a href="#claude">配合 Claude</a>
+    <a href="#more">其他</a>
+    <a href="#trouble">按键没反应</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="start">
+  <h2>开始使用</h2>
+  <p class="lead">按 README 安装完成后，在 tmux 里打开项目即可。Windows Terminal 用户先运行一次 <code>windows\wt-keys.ps1</code>，<kbd>Ctrl+Shift+字母</kbd> 等按键才能用。</p>
+  <div class="steps">
+    <div class="step"><b>1. 进入 tmux，打开项目</b><p>在项目根目录（<code>pom.xml</code> 那层）运行 <code>nvim .</code></p></div>
+    <div class="step"><b>2. 等项目导入完</b><p>状态栏右侧黄色的 <code>项目导入中 xx%</code> 消失后，跳转、查用法才完整可用。大项目 1～3 分钟，只有第一次慢。</p></div>
+    <div class="step"><b>3. 记不住就按 <kbd>F1</kbd></b><p>打开中文帮助，会按当前所在窗口列出能做的操作。按 <kbd>空格</kbd> 稍等也会弹出中文按键菜单。</p></div>
+  </div>
+  <pre>t code                 # 进入 code 会话
+cd ~/project/你的项目
+nvim .</pre>
+</section>
+
+<section id="prefix">
+  <h2>tmux 前缀变了 <span class="tag">重要</span></h2>
+  <p class="lead">为了让 <kbd>Ctrl+B</kbd> 在 nvim 里单按就能跳转，tmux 前缀按面板区分：</p>
+  <div class="tbl"><table>
+    <thead><tr><th>所在面板</th><th>tmux 操作（分屏、切窗口…）用</th></tr></thead>
+    <tbody>
+      <tr><td>nvim</td><td><kbd>Ctrl+Space</kbd> 作前缀。<kbd>Ctrl+B</kbd> 交给 nvim 跳转到声明</td></tr>
+      <tr><td>shell、Claude Code 等其他面板</td><td><kbd>Ctrl+B</kbd> 或 <kbd>Ctrl+Space</kbd> 都可以，和以前一样</td></tr>
+      <tr><td>Claude Code 里想用它自己的 <kbd>Ctrl+B</kbd>（转后台）</td><td>连按两次 <kbd>Ctrl+B</kbd></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">记不住 tmux 按键时按 <kbd>前缀</kbd> <kbd>?</kbd>，弹出中文速查表。</p>
+</section>
+
+<section id="goto">
+  <h2>跳转与查用法</h2>
+  <p class="lead">多个结果时弹出列表加大预览，<kbd>↑</kbd>/<kbd>↓</kbd> 选，回车跳，<kbd>Esc</kbd> 关。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>跳到声明</td><td><kbd>Ctrl+B</kbd><span class="or">或</span><kbd>Ctrl+点击</kbd></td></tr>
+      <tr><td>看谁用了这个方法 / 类<span class="sub">光标已经在声明上时，<kbd>Ctrl+B</kbd> 直接列出用法</span></td><td><kbd>Ctrl+B</kbd>（在声明处）<span class="or">或</span><kbd>Alt+F7</kbd> 底部面板<span class="or">或</span><kbd>Ctrl+Alt+F7</kbd> 弹框</td></tr>
+      <tr><td>接口跳到实现类 / 抽象方法跳到实现</td><td><kbd>Ctrl+Alt+B</kbd><span class="sub">在 <code>@Autowired</code> 字段上也能用</span></td></tr>
+      <tr><td>跳到父类 / 接口里的这个方法</td><td><kbd>Ctrl+U</kbd></td></tr>
+      <tr><td>点行号旁的图标跳转<span class="sub"><code>↓</code> 有实现 / 子类，<code>↑</code> 实现了接口或重写了父类</span></td><td>鼠标点击图标；<kbd>空格 u O</kbd> 开关图标</td></tr>
+      <tr><td>类型层级（父类、子类树）</td><td><kbd>Ctrl+H</kbd></td></tr>
+      <tr><td>调用层级（谁调了它 / 它调了谁）</td><td><kbd>Ctrl+Alt+H</kbd></td></tr>
+      <tr><td>底部树形面板里操作</td><td><kbd>→</kbd>/<kbd>←</kbd> 展开折叠，回车跳转，<kbd>Alt+S</kbd> 切换方向</td></tr>
+      <tr><td>上 / 下一个用法</td><td><kbd>Ctrl+Alt+↑</kbd> / <kbd>Ctrl+Alt+↓</kbd></td></tr>
+      <tr><td>跳回刚才的位置 / 再前进</td><td><kbd>Ctrl+Alt+←</kbd> / <kbd>Ctrl+Alt+→</kbd></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">跳进依赖库的类时，标签页显示类名（如 <code>ArrayList.class</code>），状态栏显示所在 jar；在库里也能继续 <kbd>Ctrl+B</kbd>、查用法。</p>
+</section>
+
+<section id="search">
+  <h2>搜索</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>什么都搜（类、文件、方法、操作）<span class="sub">代替 IDEA 的双击 Shift</span></td><td><kbd>Ctrl+Shift+Space</kbd><span class="or">或</span><kbd>空格 s e</kbd></td></tr>
+      <tr><td>找类</td><td><kbd>Ctrl+N</kbd>，默认只搜项目；再按一次包含依赖库</td></tr>
+      <tr><td>找文件</td><td><kbd>Ctrl+Shift+N</kbd></td></tr>
+      <tr><td>全局搜索文字</td><td><kbd>Ctrl+Shift+F</kbd>；选中文字后按直接搜它</td></tr>
+      <tr><td>全局搜索里限定范围<span class="sub">整个项目 → 当前模块 → 当前目录 → 自选目录，范围显示在标题</span></td><td><kbd>Alt+S</kbd> 切换范围，<kbd>Alt+T</kbd> 排除测试代码</td></tr>
+      <tr><td>全局搜索里的开关</td><td><kbd>Alt+C</kbd> 区分大小写，<kbd>Alt+W</kbd> 整词，<kbd>Alt+X</kbd> 正则；只搜某类文件：输入 <code>关键字 -- -g *.java</code></td></tr>
+      <tr><td>全局替换</td><td><kbd>Ctrl+Shift+R</kbd></td></tr>
+      <tr><td>当前文件的结构（方法、字段）</td><td><kbd>Ctrl+F12</kbd>；弹框里再按一次 <kbd>Ctrl+F12</kbd> 显示继承来的成员</td></tr>
+      <tr><td>最近打开的文件</td><td><kbd>Ctrl+E</kbd></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="spring">
+  <h2>Spring / MyBatis</h2>
+  <p class="lead">这几项不依赖项目导入，打开项目马上能用。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>按接口地址找 Controller 方法<span class="sub">输入路径片段如 <code>user/li</code>；常量拼出的地址也能解析，Feign 接口标 <code>[Feign]</code></span></td><td><kbd>Ctrl+\</kbd><span class="or">或</span><kbd>空格 s U</kbd></td></tr>
+      <tr><td>Mapper 接口方法 ↔ XML 里的 SQL</td><td>在方法名或 <code>id="..."</code> 上按 <kbd>Ctrl+B</kbd></td></tr>
+      <tr><td>XML 里跳到 resultMap、include 的 sql 片段、实体类</td><td>在 <code>resultMap="..."</code>、<code>refid="..."</code>、<code>resultType="..."</code> 上按 <kbd>Ctrl+B</kbd></td></tr>
+      <tr><td>yml / properties 配置项 → Java 里哪里用了它<span class="sub">包括 <code>@Value</code> 和 <code>@ConfigurationProperties</code> 的字段</span></td><td>在配置键上按 <kbd>Ctrl+B</kbd><span class="or">或</span><kbd>Alt+F7</kbd></td></tr>
+      <tr><td><code>@Value("${...}")</code> → 配置文件里的定义<span class="sub">多个 profile 都有时列出来让你选</span></td><td><kbd>Ctrl+B</kbd></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="read">
+  <h2>看 Java 代码</h2>
+  <p class="lead">折叠用 <kbd>Alt</kbd> 而不是 IDEA 的 <kbd>Ctrl</kbd>，因为 <kbd>Ctrl+-</kbd>/<kbd>Ctrl+=</kbd> 留给终端缩放字体。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>折叠 / 展开当前块<span class="sub">打开文件时 import 已经自动折叠；Javadoc 也能折</span></td><td><kbd>Alt+-</kbd> / <kbd>Alt+=</kbd></td></tr>
+      <tr><td>折叠 / 展开全部方法体</td><td><kbd>Alt+Shift+-</kbd> / <kbd>Alt+Shift+=</kbd></td></tr>
+      <tr><td>看这一行是谁、什么时候改的</td><td><kbd>Alt+Shift+G</kbd> 打开 Git 注释栏，再按关闭；在注释栏上回车看那次提交的改动</td></tr>
+      <tr><td>文件树把单层子目录的包合并显示（<code>com/example/demo</code>）</td><td>默认打开，<kbd>空格 u P</kbd> 开关</td></tr>
+      <tr><td><code>.properties</code> 里的 <code>用户</code> 显示成中文</td><td>自动；文件内容不变，编辑时光标行显示原文</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="bookmark">
+  <h2>书签</h2>
+  <p class="lead">按项目保存，下次打开还在。用 <kbd>Alt+F11</kbd> 是因为 <kbd>F11</kbd> 留给终端全屏。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>在当前行加 / 去掉书签</td><td><kbd>Alt+F11</kbd></td></tr>
+      <tr><td>加带字母或数字的书签</td><td><kbd>Ctrl+F11</kbd>，再按一个字符</td></tr>
+      <tr><td>跳到带字符的书签</td><td><kbd>空格 m</kbd> 加那个字符</td></tr>
+      <tr><td>所有书签列表</td><td><kbd>Alt+Shift+F11</kbd></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="markdown">
+  <h2>Markdown</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>打开链接<span class="sub">相对路径文件、<code>#标题</code>、<code>文件.md#标题</code>、网址都可以</span></td><td>回车<span class="or">或</span><kbd>Ctrl+B</kbd><span class="or">或</span><kbd>Ctrl+点击</kbd></td></tr>
+      <tr><td>标题大纲，输入过滤后跳转</td><td><kbd>Ctrl+F12</kbd><span class="or">或</span><kbd>Alt+7</kbd></td></tr>
+      <tr><td>渲染效果 ↔ 源码</td><td><kbd>空格 u m</kbd>；按 <kbd>i</kbd> 编辑时自动显示源码</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="claude">
+  <h2>配合 Claude Code</h2>
+  <p class="lead">推荐布局：<kbd>前缀 %</kbd> 左右分屏，左边 nvim 看代码，右边运行 <code>claude</code>。</p>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>Claude 输出或日志里提到的 <code>文件:行号</code>、Java 异常堆栈，在左边 nvim 打开</td><td>在 Claude 面板按 <kbd>前缀 j</kbd>，选一条回车</td></tr>
+      <tr><td>把选中的代码发给 Claude<span class="sub">以 <code>@文件#L起-止</code> 加代码贴进输入框，不会自动发送</span></td><td>nvim 里选中后按 <kbd>空格 a s</kbd></td></tr>
+      <tr><td>粘贴一段堆栈 / 日志，解析成可跳转的列表</td><td>nvim 里 <kbd>空格 j s</kbd></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="more">
+  <h2>其他</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>想做什么</th><th>按键</th></tr></thead>
+    <tbody>
+      <tr><td>复制引用<span class="sub">可选 <code>相对路径:行号</code>、<code>com.example.Foo#bar</code>、文件名等，复制到系统剪贴板</span></td><td><kbd>空格 c y</kbd><span class="or">或</span><kbd>Ctrl+Alt+Shift+C</kbd></td></tr>
+      <tr><td>中文帮助</td><td><kbd>F1</kbd><span class="or">或</span><kbd>空格 h</kbd>；帮助里按 <kbd>a</kbd> 看全部按键</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="trouble">
+  <h2>按键没反应时</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>情况</th><th>怎么办</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>Ctrl+Shift+字母</kbd>、<kbd>Ctrl+Shift+Space</kbd> 在 Windows Terminal 里没反应</td><td>运行一次 <code>windows\wt-keys.ps1</code>（不需要管理员，见 README「Neovim」一节）</td></tr>
+      <tr><td><kbd>Ctrl+Shift+字母</kbd> 按不出来</td><td>对应的 <kbd>Alt+Shift+字母</kbd> 功能完全相同，例如 <kbd>Alt+Shift+F</kbd> 全局搜索</td></tr>
+      <tr><td><kbd>Ctrl+Alt+Shift+C</kbd> 变成了"提取常量"</td><td>终端分不清这两个键，用 <kbd>空格 c y</kbd></td></tr>
+      <tr><td>跳转、查用法没结果</td><td>看状态栏是否还在"项目导入中"，等它消失</td></tr>
+      <tr><td>在浏览器里用</td><td>浏览器会抢走 <kbd>Ctrl+N</kbd>、<kbd>Ctrl+W</kbd>、<kbd>Ctrl+T</kbd>；<kbd>Ctrl+N</kbd> 用 <kbd>Alt+N</kbd> 代替，千万别按 <kbd>Ctrl+W</kbd></td></tr>
+      <tr><td>文件树显示不对（插件升级后）</td><td><kbd>空格 u P</kbd> 关掉包合并</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</main>
+
+<footer class="wrap">完整按键表见仓库 <a href="https://github.com/caokang1/tmux-nvim-kit#readme">README</a>；nvim 里 <kbd>F1</kbd> 的中文帮助总是和当前版本一致。</footer>
+</body>
+</html>
